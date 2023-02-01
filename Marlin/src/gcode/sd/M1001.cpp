@@ -57,6 +57,10 @@
   #include "../../feature/host_actions.h"
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "../../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 #ifndef PE_LEDS_COMPLETED_TIME
   #define PE_LEDS_COMPLETED_TIME (30*60)
 #endif
@@ -109,10 +113,16 @@ void GcodeSuite::M1001() {
   #endif
 
   TERN_(EXTENSIBLE_UI, ExtUI::onPrintDone());
-  TERN_(DWIN_LCD_PROUI, DWIN_Print_Finished());
 
   // Re-select the last printed file in the UI
   TERN_(SD_REPRINT_LAST_SELECTED_FILE, ui.reselect_last_file());
+
+  #if BOTH(HAS_CUTTER, RTS_AVAILABLE)
+  if(laser_device.is_laser_device()){ 
+    rtscheck.RTS_SndData(ExchangePageBase + 60, ExchangepageAddr);
+    change_page_font = 60;
+  }
+#endif
 }
 
 #endif // SDSUPPORT

@@ -52,6 +52,10 @@
   #include "../../../lcd/e3v2/proui/dwin.h"
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "../../../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 #if HAS_MULTI_HOTEND
   #include "../../../module/tool_change.h"
 #endif
@@ -734,6 +738,16 @@ G29_TYPE GcodeSuite::G29() {
 
           #endif
 
+          #if ENABLED(RTS_AVAILABLE)
+              if(!IS_SD_PRINTING())
+              {
+                  rtscheck.RTS_SndData((uint16_t)((100.0 / (GRID_MAX_POINTS_X * GRID_MAX_POINTS_Y) * pt_index) / 2) , AUTO_BED_LEVEL_TITLE_VP);
+                  rtscheck.RTS_SndData((uint16_t)(100.0 / (GRID_MAX_POINTS_X * GRID_MAX_POINTS_Y) * pt_index), AUTO_LEVELING_PERCENT_DATA_VP);
+                  rtscheck.RTS_SndData(ExchangePageBase + 26, ExchangepageAddr);
+                  change_page_font = 26;
+              }
+          #endif
+
           abl.reenable = false; // Don't re-enable after modifying the mesh
           idle_no_sleep();
 
@@ -947,6 +961,10 @@ G29_TYPE GcodeSuite::G29() {
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("Z Probe End Script: ", Z_PROBE_END_SCRIPT);
     planner.synchronize();
     process_subcommands_now(F(Z_PROBE_END_SCRIPT));
+  #endif
+
+  #if ENABLED(RTS_AVAILABLE)
+    RTS_AutoBedLevelPage();
   #endif
 
   TERN_(HAS_MULTI_HOTEND, if (abl.tool_index != 0) tool_change(abl.tool_index));

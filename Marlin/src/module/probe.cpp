@@ -100,6 +100,10 @@
   #include "../lcd/e3v2/proui/dwin.h"
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 #define DEBUG_OUT ENABLED(DEBUG_LEVELING_FEATURE)
 #include "../core/debug_out.h"
 
@@ -445,31 +449,33 @@ FORCE_INLINE void probe_specific_action(const bool deploy) {
 
     LCD_MESSAGE(MSG_PREHEATING);
 
-    DEBUG_ECHOPGM("Preheating ");
+    if (hotend_temp > thermalManager.wholeDegHotend(0) + 5 || bed_temp > thermalManager.wholeDegBed() + 5) {
+      DEBUG_ECHOPGM("Preheating ");
 
-    #if ENABLED(WAIT_FOR_NOZZLE_HEAT)
-      const celsius_t hotendPreheat = hotend_temp > thermalManager.degTargetHotend(0) ? hotend_temp : 0;
-      if (hotendPreheat) {
-        DEBUG_ECHOPGM("hotend (", hotendPreheat, ")");
-        thermalManager.setTargetHotend(hotendPreheat, 0);
-      }
-    #elif ENABLED(WAIT_FOR_BED_HEAT)
-      constexpr celsius_t hotendPreheat = 0;
-    #endif
+      #if ENABLED(WAIT_FOR_NOZZLE_HEAT)
+        const celsius_t hotendPreheat = hotend_temp > thermalManager.degTargetHotend(0) ? hotend_temp : 0;
+        if (hotendPreheat) {
+          DEBUG_ECHOPGM("hotend (", hotendPreheat, ")");
+          thermalManager.setTargetHotend(hotendPreheat, 0);
+        }
+      #elif ENABLED(WAIT_FOR_BED_HEAT)
+        constexpr celsius_t hotendPreheat = 0;
+      #endif
 
-    #if ENABLED(WAIT_FOR_BED_HEAT)
-      const celsius_t bedPreheat = bed_temp > thermalManager.degTargetBed() ? bed_temp : 0;
-      if (bedPreheat) {
-        if (hotendPreheat) DEBUG_ECHOPGM(" and ");
-        DEBUG_ECHOPGM("bed (", bedPreheat, ")");
-        thermalManager.setTargetBed(bedPreheat);
-      }
-    #endif
+      #if ENABLED(WAIT_FOR_BED_HEAT)
+        const celsius_t bedPreheat = bed_temp > thermalManager.degTargetBed() ? bed_temp : 0;
+        if (bedPreheat) {
+          if (hotendPreheat) DEBUG_ECHOPGM(" and ");
+          DEBUG_ECHOPGM("bed (", bedPreheat, ")");
+          thermalManager.setTargetBed(bedPreheat);
+        }
+      #endif
 
-    DEBUG_EOL();
+      DEBUG_EOL();
 
-    TERN_(WAIT_FOR_NOZZLE_HEAT, if (hotend_temp > thermalManager.wholeDegHotend(0) + (TEMP_WINDOW)) thermalManager.wait_for_hotend(0));
-    TERN_(WAIT_FOR_BED_HEAT,    if (bed_temp    > thermalManager.wholeDegBed() + (TEMP_BED_WINDOW)) thermalManager.wait_for_bed_heating());
+      TERN_(WAIT_FOR_NOZZLE_HEAT, if (hotend_temp > thermalManager.wholeDegHotend(0) + (TEMP_WINDOW)) thermalManager.wait_for_hotend(0));
+      TERN_(WAIT_FOR_BED_HEAT,    if (bed_temp    > thermalManager.wholeDegBed() + (TEMP_BED_WINDOW)) thermalManager.wait_for_bed_heating());
+    }
   }
 
 #endif
@@ -904,6 +910,15 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
   }
 
   if (isnan(measured_z)) {
+
+    #if ENABLED(RTS_AVAILABLE)
+      waitway = 0;
+      rtscheck.RTS_SndData(ExchangePageBase + 41, ExchangepageAddr);
+      change_page_font = 41;
+      rtscheck.RTS_SndData(Error_203, ABNORMAL_PAGE_TEXT_VP);
+      errorway = 3;
+    #endif
+
     stow();
     LCD_MESSAGE(MSG_LCD_PROBING_FAILED);
     #if DISABLED(G29_RETRY_AND_RECOVER)

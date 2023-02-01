@@ -171,6 +171,10 @@
   #include "../lcd/extui/dgus/DGUSDisplayDef.h"
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 #pragma pack(push, 1) // No padding between variables
 
 #if HAS_ETHERNET
@@ -516,6 +520,10 @@ typedef struct SettingsDataStruct {
   //
   #if CASELIGHT_USES_BRIGHTNESS
     uint8_t caselight_brightness;                        // M355 P
+  #endif
+
+  #if ENABLED(RTS_AVAILABLE)
+    uint8_t language_change_font;
   #endif
 
   //
@@ -1541,6 +1549,10 @@ void MarlinSettings::postprocess() {
       EEPROM_WRITE(caselight.brightness);
     #endif
 
+    #if ENABLED(RTS_AVAILABLE)
+        EEPROM_WRITE(language_change_font);
+    #endif
+
     //
     // Password feature
     //
@@ -2494,7 +2506,7 @@ void MarlinSettings::postprocess() {
       #endif
 
       //
-      // Creality DWIN User Data
+      // DWIN User Data
       //
       #if ENABLED(DWIN_LCD_PROUI)
       {
@@ -2518,6 +2530,22 @@ void MarlinSettings::postprocess() {
       #if CASELIGHT_USES_BRIGHTNESS
         _FIELD_TEST(caselight_brightness);
         EEPROM_READ(caselight.brightness);
+      #endif
+
+      #if ENABLED(RTS_AVAILABLE)
+        EEPROM_READ(language_change_font);
+        if((language_change_font != 1) &&
+          (language_change_font != 2) &&
+          (language_change_font != 3) &&
+          (language_change_font != 4) &&
+          (language_change_font != 5) &&
+          (language_change_font != 6) &&
+          (language_change_font != 7) &&
+          (language_change_font != 8) &&
+          (language_change_font != 9))
+        {
+          language_change_font = 2;
+        }
       #endif
 
       //
@@ -2819,7 +2847,7 @@ void MarlinSettings::postprocess() {
         #endif
 
         #if ENABLED(DWIN_LCD_PROUI)
-          status = !BedLevelTools.meshvalidate();
+          status = !bedLevelTools.meshvalidate();
           if (status) {
             bedlevel.invalidate();
             LCD_MESSAGE(MSG_UBL_MESH_INVALID);
@@ -2975,6 +3003,10 @@ void MarlinSettings::reset() {
   // Case Light Brightness
   //
   TERN_(CASELIGHT_USES_BRIGHTNESS, caselight.brightness = CASE_LIGHT_DEFAULT_BRIGHTNESS);
+
+  #if ENABLED(RTS_AVAILABLE)
+      language_change_font = 2;
+  #endif
 
   //
   // TOUCH_SCREEN_CALIBRATION
@@ -3271,7 +3303,7 @@ void MarlinSettings::reset() {
     #if ENABLED(DISTINCT_E_FACTORS)
       constexpr float linAdvanceK[] = ADVANCE_K;
       EXTRUDER_LOOP() {
-        const float a = linAdvanceK[_MAX(e, COUNT(linAdvanceK) - 1)];
+        const float a = linAdvanceK[_MAX(uint8_t(e), COUNT(linAdvanceK) - 1)];
         planner.extruder_advance_K[e] = a;
         TERN_(ADVANCE_K_EXTRA, other_extruder_advance_K[e] = a);
       }

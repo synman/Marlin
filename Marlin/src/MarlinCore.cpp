@@ -77,6 +77,10 @@
   #endif
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 #if HAS_ETHERNET
   #include "feature/ethernet.h"
 #endif
@@ -259,6 +263,11 @@ MarlinState marlin_state = MF_INITIALIZING;
 // For M109 and M190, this flag may be cleared (by M108) to exit the wait loop
 bool wait_for_heatup = true;
 
+uint8_t language_change_font = 2;  //语言选择标志位
+                                   // translates to language selection flag
+                                   // I swear Creality has some kind of twisted
+                                   // AI or a college intern writing their code
+
 // For M0/M1, this flag may be cleared (by M108) to exit the wait-for-user loop
 #if HAS_RESUME_CONTINUE
   bool wait_for_user; // = false;
@@ -420,7 +429,15 @@ inline void manage_inactivity(const bool no_stepper_sleep=false) {
     SERIAL_ERROR_START();
     SERIAL_ECHOPGM(STR_KILL_PRE);
     SERIAL_ECHOLNPGM(STR_KILL_INACTIVE_TIME, parser.command_ptr);
-    kill();
+    #ifdef RTS_AVAILABLE
+      waitway = 0;
+      rtscheck.RTS_SndData(ExchangePageBase + 41, ExchangepageAddr);
+      change_page_font = 41;
+      rtscheck.RTS_SndData(Error_201, ABNORMAL_PAGE_TEXT_VP);
+      errorway = 1;
+    #else
+      kill();
+    #endif
   }
 
   const bool has_blocks = planner.has_blocks_queued();  // Any moves in the planner?
@@ -841,6 +858,15 @@ void idle(bool no_stepper_sleep/*=false*/) {
 
   // Handle UI input / draw events
   TERN(DWIN_CREALITY_LCD, DWIN_Update(), ui.update());
+  #if HAS_CUTTER
+    if(laser_device.is_laser_device())
+    {
+      TERN(RTS_AVAILABLE, RTSUpdateLaser(),ui.update());
+    }else
+  #endif
+  {
+    TERN(RTS_AVAILABLE, RTSUpdate(),ui.update());
+  }
 
   // Run i2c Position Encoders
   #if ENABLED(I2C_POSITION_ENCODERS)
@@ -1314,7 +1340,13 @@ void setup() {
   // UI must be initialized before EEPROM
   // (because EEPROM code calls the UI).
 
-  SETUP_RUN(ui.init());
+  #if ENABLED(RTS_AVAILABLE)
+    #ifdef LCD_SERIAL_PORT
+      LCD_SERIAL.begin(LCD_BAUDRATE);
+    #endif
+  #else
+    SETUP_RUN(ui.init());
+  #endif
 
   #if PIN_EXISTS(SAFE_POWER)
     #if HAS_DRIVER_SAFE_POWER_PROTECT
@@ -1332,6 +1364,11 @@ void setup() {
   SETUP_RUN(settings.first_load());   // Load data from EEPROM if available (or use defaults)
                                       // This also updates variables in the planner, elsewhere
 
+  #if ENABLED(RTS_AVAILABLE)
+    // TERN_(HAS_M414_COMMAND, lang = language_change_font);
+    lang = language_change_font;
+  #endif
+  
   #if BOTH(HAS_WIRED_LCD, SHOW_BOOTSCREEN)
     SETUP_RUN(ui.show_bootscreen());
     const millis_t bootscreen_ms = millis();
@@ -1594,6 +1631,11 @@ void setup() {
 
   #if HAS_DWIN_E3V2_BASIC
     SETUP_RUN(DWIN_InitScreen());
+  #endif
+
+  #if ENABLED(RTS_AVAILABLE)
+      delay(500);
+      SETUP_RUN(rtscheck.RTS_Init());
   #endif
 
   #if HAS_SERVICE_INTERVALS && !HAS_DWIN_E3V2_BASIC

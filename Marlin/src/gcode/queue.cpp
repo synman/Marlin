@@ -57,6 +57,10 @@ GCodeQueue queue;
   #include "../feature/repeat.h"
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 // Frequently used G-code strings
 PGMSTR(G28_STR, "G28");
 
@@ -205,6 +209,21 @@ void GCodeQueue::enqueue_one_now(FSTR_P const fcmd) { while (!enqueue_one(fcmd))
 bool GCodeQueue::enqueue_one(FSTR_P const fcmd) {
   size_t i = 0;
   PGM_P p = FTOP(fcmd);
+  char c;
+  while ((c = pgm_read_byte(&p[i])) && c != '\n') i++;
+  char cmd[i + 1];
+  memcpy_P(cmd, p, i);
+  cmd[i] = '\0';
+  return ring_buffer.enqueue(cmd);
+}
+
+/**
+ * Attempt to enqueue a single G-code command
+ * and return 'true' if successful.
+ */
+bool GCodeQueue::enqueue_one_P(PGM_P const pgcode) {
+  size_t i = 0;
+  PGM_P p = pgcode;
   char c;
   while ((c = pgm_read_byte(&p[i])) && c != '\n') i++;
   char cmd[i + 1];
@@ -594,6 +613,34 @@ void GCodeQueue::get_serial_commands() {
       }
       else
         process_stream_char(sd_char, sd_input_state, command.buffer, sd_count);
+
+        #if ENABLED(RTS_AVAILABLE)
+          // the printing results
+          if (card_eof)
+          {
+            rtscheck.RTS_SndData(100, PRINT_PROCESS_VP);
+            delay(1);
+            rtscheck.RTS_SndData(100, PRINT_PROCESS_ICON_VP);
+            delay(1);
+
+            #if HAS_CUTTER
+              if(laser_device.is_laser_device()){ 
+                // rtscheck.RTS_SndData(ExchangePageBase + 60, ExchangepageAddr);
+                //  change_page_font = 60;
+              }else
+            #endif
+            {
+              rtscheck.RTS_SndData(ExchangePageBase + 9, ExchangepageAddr);
+              change_page_font = 9;
+            }
+
+            // if(flag_over_shutdown)
+            // {
+            //   // Start the automatic shutdown timer after printing
+            //   flag_counter_printover_to_shutdown = true;
+            // }
+          }
+      #endif
     }
   }
 

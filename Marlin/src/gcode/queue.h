@@ -155,6 +155,12 @@ public:
    */
   static bool enqueue_one(const char *cmd);
 
+/**
+   * Attempt to enqueue a single G-code command
+   * and return 'true' if successful.
+   */
+  static bool enqueue_one_P(PGM_P const pgcode);
+
   /**
    * Enqueue from program memory and return only when commands are actually enqueued
    */
