@@ -159,6 +159,9 @@
   #define FSMC_CS_PIN                 TFT_CS_PIN  // NE4
   #define FSMC_RS_PIN                 TFT_RS_PIN  // A0
 
+  #define TFT_CS_PIN                 FSMC_CS_PIN
+  #define TFT_RS_PIN                 FSMC_RS_PIN
+
   #define LCD_USE_DMA_FSMC                        // Use DMA transfers to send data to the TFT
   #define FSMC_DMA_DEV                      DMA2
   #define FSMC_DMA_CHANNEL               DMA_CH5

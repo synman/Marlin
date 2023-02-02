@@ -63,7 +63,6 @@
   #define BEEPER_PIN                          27
 
   #define LCD_PINS_DEFINED
-
 #endif
 
 #include "pins_MELZI.h" // ... SANGUINOLOLU_12 ... SANGUINOLOLU_11

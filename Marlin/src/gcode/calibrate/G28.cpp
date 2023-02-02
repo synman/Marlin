@@ -64,6 +64,10 @@
   #include "../../feature/spindle_laser.h"
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "../../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 #define DEBUG_OUT ENABLED(DEBUG_LEVELING_FEATURE)
 #include "../../core/debug_out.h"
 
@@ -239,6 +243,10 @@ void GcodeSuite::G28() {
   #if ENABLED(FULL_REPORT_TO_HOST_FEATURE)
     const M_StateEnum old_grblstate = M_State_grbl;
     set_and_report_grblstate(M_HOMING);
+  #endif
+
+  #if ENABLED(RTS_AVAILABLE)
+    home_flag = true;
   #endif
 
   TERN_(HAS_DWIN_E3V2_BASIC, DWIN_HomingStart());
@@ -603,6 +611,15 @@ void GcodeSuite::G28() {
 
   TERN_(HAS_DWIN_E3V2_BASIC, DWIN_HomingDone());
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingDone());
+
+  TERN_(RTS_AVAILABLE, RTS_MoveAxisHoming());
+  TERN_(RTS_AVAILABLE, rtscheck.RTS_SndData(0, MOTOR_FREE_ICON_VP));
+
+  #if ENABLED(RTS_AVAILABLE)
+    home_flag  = false;
+  //   home_count = true;
+  //   endstops.enable_z_probe(false);
+  #endif
 
   report_current_position();
 

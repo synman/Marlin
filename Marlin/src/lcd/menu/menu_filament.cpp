@@ -39,6 +39,10 @@
   #include "../../MarlinCore.h"
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "../../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 //
 // Change Filament > Change/Unload/Load Filament
 //
@@ -266,7 +270,13 @@ void menu_pause_option() {
 
   if (!still_out)
     ACTION_ITEM(MSG_FILAMENT_CHANGE_OPTION_RESUME, []{ pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT; });
-
+    #if ENABLED(RTS_AVAILABLE)
+        rtscheck.RTS_SndData(ExchangePageBase + 8, ExchangepageAddr);
+        change_page_font = 8;
+      #if ENABLED(FILAMENT_RUNOUT_SENSOR_DEBUG)
+        SERIAL_ECHOLNPAIR("\r\npause_menu_response: ", pause_menu_response);
+      #endif
+    #endif
   END_MENU();
 }
 

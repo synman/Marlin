@@ -21,6 +21,8 @@
  */
 #pragma once
 
+// TODO: Make AVR-compatible with separate ROM / RAM string methods
+
 #include <stdint.h>
 
 #include "../fontutils.h"

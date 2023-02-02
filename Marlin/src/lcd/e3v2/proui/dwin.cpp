@@ -1883,7 +1883,6 @@ void DWIN_RedrawScreen() {
 #endif // ADVANCED_PAUSE_FEATURE
 
 #if HAS_MESH
-
   void DWIN_MeshViewer() {
     if (!leveling_is_valid())
       DWIN_Popup_Continue(ICON_BLTouch, GET_TEXT_F(MSG_MESH_VIEWER), GET_TEXT_F(MSG_NO_VALID_MESH));
@@ -1961,7 +1960,6 @@ void Goto_ConfirmToPrint() {
 // Tool functions
 
 #if ENABLED(EEPROM_SETTINGS)
-
   void WriteEeprom() {
     DWIN_DrawStatusLine(GET_TEXT_F(MSG_STORE_EEPROM));
     DWIN_UpdateLCD();
@@ -2938,7 +2936,6 @@ void onDrawMaxAccelZ(MenuItemClass* menuitem, int8_t line) {
   }
 
   #if HAS_HOTEND
-
     void onDrawMaxJerkE(MenuItemClass* menuitem, int8_t line) {
       if (HMI_IsChinese()) {
         menuitem->SetFrame(1, 173, 133, 200, 147);
@@ -2948,7 +2945,6 @@ void onDrawMaxAccelZ(MenuItemClass* menuitem, int8_t line) {
       }
       onDrawPFloatMenu(menuitem, line);
     }
-
   #endif
 
 #endif // HAS_CLASSIC_JERK
@@ -2978,7 +2974,6 @@ void onDrawStepsZ(MenuItemClass* menuitem, int8_t line) {
 }
 
 #if HAS_HOTEND
-
   void onDrawStepsE(MenuItemClass* menuitem, int8_t line) {
     if (HMI_IsChinese()) {
       menuitem->SetFrame(1, 153, 148, 194, 161);
@@ -2986,7 +2981,6 @@ void onDrawStepsZ(MenuItemClass* menuitem, int8_t line) {
     }
     onDrawPFloatMenu(menuitem, line);
   }
-
 #endif
 
 #if HAS_ONESTEP_LEVELING
@@ -3160,7 +3154,6 @@ void Draw_Move_Menu() {
 }
 
 #if HAS_HOME_OFFSET
-
   void Draw_HomeOffset_Menu() {
     checkkey = Menu;
     if (SET_MENU(HomeOffMenu, MSG_SET_HOME_OFFSETS, 4)) {
@@ -3195,7 +3188,6 @@ void Draw_Move_Menu() {
     }
     UpdateMenu(ProbeSetMenu);
   }
-
 #endif
 
 void Draw_FilSet_Menu() {
@@ -3263,7 +3255,6 @@ void Draw_GetColor_Menu() {
 }
 
 #if BOTH(CASE_LIGHT_MENU, CASELIGHT_USES_BRIGHTNESS)
-
   void Draw_CaseLight_Menu() {
     checkkey = Menu;
     if (SET_MENU(CaseLightMenu, MSG_CASE_LIGHT, 3)) {
@@ -3371,7 +3362,6 @@ void Draw_Motion_Menu() {
 }
 
 #if ENABLED(ADVANCED_PAUSE_FEATURE)
-
   void Draw_FilamentMan_Menu() {
     checkkey = Menu;
     if (SET_MENU(FilamentMenu, MSG_FILAMENT_MAN, 5)) {
@@ -3488,7 +3478,6 @@ void Draw_MaxAccel_Menu() {
 }
 
 #if HAS_CLASSIC_JERK
-
   void Draw_MaxJerk_Menu() {
     checkkey = Menu;
     if (SET_MENU_R(MaxJerkMenu, selrect({1, 16, 28, 13}), MSG_JERK, 5)) {
@@ -3520,7 +3509,6 @@ void Draw_Steps_Menu() {
 }
 
 #if ENABLED(PIDTEMP)
-
   void Draw_HotendPID_Menu() {
     checkkey = Menu;
     if (SET_MENU_F(HotendPIDMenu, STR_HOTEND_PID " Settings", 8)) {
@@ -3642,7 +3630,6 @@ void Draw_Steps_Menu() {
     }
     UpdateMenu(FWRetractMenu);
   }
-
 #endif
 
 //=============================================================================

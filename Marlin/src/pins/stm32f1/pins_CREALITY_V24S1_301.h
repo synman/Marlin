@@ -32,15 +32,21 @@
   #error "Creality v24S1 only supports 1 hotend / E stepper."
 #endif
 
-#if BOTH(BLTOUCH, Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)
-  #error "Disable Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN when using BLTOUCH with Creality V24S1-301."
-#endif
+// #if BOTH(BLTOUCH, Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)
+//   #error "Disable Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN when using BLTOUCH with Creality V24S1-301."
+// #endif
 
 #ifndef BOARD_INFO_NAME
   #define BOARD_INFO_NAME      "Creality V24S1-301"
 #endif
 #ifndef DEFAULT_MACHINE_NAME
-  #define DEFAULT_MACHINE_NAME "Ender 3 S1"
+  #if ENABLED(ENDER_3S1_PRO)
+    #define DEFAULT_MACHINE_NAME "Ender 3 S1 Pro"
+  #elif ENABLED(ENDER_3S1_PLUS)
+    #define DEFAULT_MACHINE_NAME "Ender 3 S1+"
+  #else
+    #define DEFAULT_MACHINE_NAME "Ender 3 S1"
+  #endif
 #endif
 
 //
@@ -53,7 +59,8 @@
 //
 // Limit Switches
 //
-#define Z_STOP_PIN                          PA15
+// #define Z_STOP_PIN                          PA15
+#define Z_STOP_PIN                          PC14
 
 #ifndef Z_MIN_PROBE_PIN
   #define Z_MIN_PROBE_PIN                   PC14  // BLTouch IN

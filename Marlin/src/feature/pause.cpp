@@ -74,6 +74,10 @@
   #include "powerloss.h"
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 #include "../libs/nozzle.h"
 #include "pause.h"
 
@@ -411,6 +415,11 @@ bool pause_print(const_float_t retract, const xyz_pos_t &park_point, const bool 
 
   TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_open(PROMPT_INFO, F("Pause"), FPSTR(DISMISS_STR)));
 
+  #if ENABLED(RTS_AVAILABLE)
+    rtscheck.RTS_SndData(ExchangePageBase + 7, ExchangepageAddr);
+    change_page_font = 7;
+  #endif
+
   // Indicate that the printer is paused
   ++did_pause_print;
 
@@ -527,58 +536,97 @@ void wait_for_confirmation(const bool is_reload/*=false*/, const int8_t max_beep
   KEEPALIVE_STATE(PAUSED_FOR_USER);
   TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_do(PROMPT_USER_CONTINUE, GET_TEXT_F(MSG_NOZZLE_PARKED), FPSTR(CONTINUE_STR)));
   TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired(GET_TEXT_F(MSG_NOZZLE_PARKED)));
-  wait_for_user = true;    // LCD click or M108 will clear this
-  while (wait_for_user) {
-    impatient_beep(max_beep_count);
 
-    // If the nozzle has timed out...
-    if (!nozzle_timed_out)
-      HOTEND_LOOP() nozzle_timed_out |= thermalManager.heater_idle[e].timed_out;
+  #if ENABLED(RTS_AVAILABLE)
+    while (runout.filament_ran_out)
+    {
+      // SERIAL_ECHOLNPAIR("\r\nwait_for_confirmation_2...");
+      // If the nozzle has timed out...
+      if (!nozzle_timed_out)
+        HOTEND_LOOP() nozzle_timed_out |= thermalManager.heater_idle[e].timed_out;
+      // Wait for the user to press the button to re-heat the nozzle, then
+      // re-heat the nozzle, re-show the continue prompt, restart idle timers, start over
+      if (nozzle_timed_out) {
+        SERIAL_ECHO_MSG(_PMSG(STR_FILAMENT_CHANGE_HEAT));
 
-    // Wait for the user to press the button to re-heat the nozzle, then
-    // re-heat the nozzle, re-show the continue prompt, restart idle timers, start over
-    if (nozzle_timed_out) {
-      ui.pause_show_message(PAUSE_MESSAGE_HEAT);
-      SERIAL_ECHO_MSG(_PMSG(STR_FILAMENT_CHANGE_HEAT));
+        // wait_for_user_response(0, true); // Wait for LCD click or M108
 
-      TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_do(PROMPT_USER_CONTINUE, GET_TEXT_F(MSG_HEATER_TIMEOUT), GET_TEXT_F(MSG_REHEAT)));
+        // Re-enable the heaters if they timed out
+        HOTEND_LOOP() thermalManager.reset_hotend_idle_timer(e);
 
-      TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired(GET_TEXT_F(MSG_HEATER_TIMEOUT)));
+        // Wait for the heaters to reach the target temperatures
+        ensure_safe_temperature(false);
 
-      TERN_(HAS_RESUME_CONTINUE, wait_for_user_response(0, true)); // Wait for LCD click or M108
+        // Start the heater idle timers
+        const millis_t nozzle_timeout = SEC_TO_MS(PAUSE_PARK_NOZZLE_TIMEOUT);
 
-      TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_do(PROMPT_INFO, GET_TEXT_F(MSG_REHEATING)));
+        HOTEND_LOOP() thermalManager.heater_idle[e].start(nozzle_timeout);
+        // wait_for_user = true;
+        nozzle_timed_out = false;
+      }
+      else if(card.flag.abort_sd_printing)
+      {
+        runout.reset();
+        return;
+      }
 
-      TERN_(EXTENSIBLE_UI, ExtUI::onStatusChanged(GET_TEXT_F(MSG_REHEATING)));
-
-      TERN_(DWIN_LCD_PROUI, LCD_MESSAGE(MSG_REHEATING));
-
-      // Re-enable the heaters if they timed out
-      HOTEND_LOOP() thermalManager.reset_hotend_idle_timer(e);
-
-      // Wait for the heaters to reach the target temperatures
-      ensure_safe_temperature(false);
-
-      // Show the prompt to continue
-      show_continue_prompt(is_reload);
-
-      // Start the heater idle timers
-      const millis_t nozzle_timeout = SEC_TO_MS(PAUSE_PARK_NOZZLE_TIMEOUT);
-
-      HOTEND_LOOP() thermalManager.heater_idle[e].start(nozzle_timeout);
-
-      TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_do(PROMPT_USER_CONTINUE, GET_TEXT_F(MSG_REHEATDONE), FPSTR(CONTINUE_STR)));
-      TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired(GET_TEXT_F(MSG_REHEATDONE)));
-      TERN_(DWIN_LCD_PROUI, LCD_MESSAGE(MSG_REHEATDONE));
-
-      IF_DISABLED(PAUSE_REHEAT_FAST_RESUME, wait_for_user = true);
-
-      nozzle_timed_out = false;
-      first_impatient_beep(max_beep_count);
+      idle_no_sleep();
     }
-    idle_no_sleep();
-  }
-  TERN_(DUAL_X_CARRIAGE, set_duplication_enabled(saved_ext_dup_mode, saved_ext));
+  #else
+      wait_for_user = true;    // LCD click or M108 will clear this
+      while (wait_for_user) {
+        impatient_beep(max_beep_count);
+
+        // If the nozzle has timed out...
+        if (!nozzle_timed_out)
+          HOTEND_LOOP() nozzle_timed_out |= thermalManager.heater_idle[e].timed_out;
+
+        // Wait for the user to press the button to re-heat the nozzle, then
+        // re-heat the nozzle, re-show the continue prompt, restart idle timers, start over
+        if (nozzle_timed_out) {
+          ui.pause_show_message(PAUSE_MESSAGE_HEAT);
+          SERIAL_ECHO_MSG(_PMSG(STR_FILAMENT_CHANGE_HEAT));
+
+          TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_do(PROMPT_USER_CONTINUE, GET_TEXT_F(MSG_HEATER_TIMEOUT), GET_TEXT_F(MSG_REHEAT)));
+
+          TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired(GET_TEXT_F(MSG_HEATER_TIMEOUT)));
+
+          TERN_(HAS_RESUME_CONTINUE, wait_for_user_response(0, true)); // Wait for LCD click or M108
+
+          TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_do(PROMPT_INFO, GET_TEXT_F(MSG_REHEATING)));
+
+          TERN_(EXTENSIBLE_UI, ExtUI::onStatusChanged(GET_TEXT_F(MSG_REHEATING)));
+
+          TERN_(DWIN_LCD_PROUI, LCD_MESSAGE(MSG_REHEATING));
+
+          // Re-enable the heaters if they timed out
+          HOTEND_LOOP() thermalManager.reset_hotend_idle_timer(e);
+
+          // Wait for the heaters to reach the target temperatures
+          ensure_safe_temperature(false);
+
+          // Show the prompt to continue
+          show_continue_prompt(is_reload);
+
+          // Start the heater idle timers
+          const millis_t nozzle_timeout = SEC_TO_MS(PAUSE_PARK_NOZZLE_TIMEOUT);
+
+          HOTEND_LOOP() thermalManager.heater_idle[e].start(nozzle_timeout);
+
+          TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_do(PROMPT_USER_CONTINUE, GET_TEXT_F(MSG_REHEATDONE), FPSTR(CONTINUE_STR)));
+          TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired(GET_TEXT_F(MSG_REHEATDONE)));
+          TERN_(DWIN_LCD_PROUI, LCD_MESSAGE(MSG_REHEATDONE));
+
+          IF_DISABLED(PAUSE_REHEAT_FAST_RESUME, wait_for_user = true);
+
+          nozzle_timed_out = false;
+          first_impatient_beep(max_beep_count);
+        }
+        idle_no_sleep();
+      }
+  #endif
+
+    TERN_(DUAL_X_CARRIAGE, set_duplication_enabled(saved_ext_dup_mode, saved_ext));
 }
 
 /**
