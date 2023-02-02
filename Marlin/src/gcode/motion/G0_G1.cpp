@@ -35,7 +35,7 @@
   #include "../../module/planner.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../../lcd/e3v2/creality/lcd_rts.h"
 #endif
 
@@ -136,7 +136,7 @@ void GcodeSuite::G0_G1(TERN_(HAS_FAST_MOVES, const bool fast_move/*=false*/)) {
       TERN_(FULL_REPORT_TO_HOST_FEATURE, report_current_grblstate_moving());
     #endif
 
-    #if ENABLED(RTS_AVAILABLE)
+    #if ENABLED(CREALITY_TOUCHSCREEN)
       RTS_PauseMoveAxisPage();
     #endif
   }

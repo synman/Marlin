@@ -39,7 +39,7 @@
   #include "../../MarlinCore.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../../lcd/e3v2/creality/lcd_rts.h"
 #endif
 
@@ -270,7 +270,7 @@ void menu_pause_option() {
 
   if (!still_out)
     ACTION_ITEM(MSG_FILAMENT_CHANGE_OPTION_RESUME, []{ pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT; });
-    #if ENABLED(RTS_AVAILABLE)
+    #if ENABLED(CREALITY_TOUCHSCREEN)
         rtscheck.RTS_SndData(ExchangePageBase + 8, ExchangepageAddr);
         change_page_font = 8;
       #if ENABLED(FILAMENT_RUNOUT_SENSOR_DEBUG)

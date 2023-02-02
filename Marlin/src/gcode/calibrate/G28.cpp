@@ -64,7 +64,7 @@
   #include "../../feature/spindle_laser.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../../lcd/e3v2/creality/lcd_rts.h"
 #endif
 
@@ -245,7 +245,7 @@ void GcodeSuite::G28() {
     set_and_report_grblstate(M_HOMING);
   #endif
 
-  #if ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     home_flag = true;
   #endif
 
@@ -605,10 +605,10 @@ void GcodeSuite::G28() {
   TERN_(HAS_DWIN_E3V2_BASIC, DWIN_HomingDone());
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingDone());
 
-  TERN_(RTS_AVAILABLE, RTS_MoveAxisHoming());
-  TERN_(RTS_AVAILABLE, rtscheck.RTS_SndData(0, MOTOR_FREE_ICON_VP));
+  TERN_(CREALITY_TOUCHSCREEN, RTS_MoveAxisHoming());
+  TERN_(CREALITY_TOUCHSCREEN, rtscheck.RTS_SndData(0, MOTOR_FREE_ICON_VP));
 
-  #if ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     home_flag  = false;
   //   home_count = true;
   //   endstops.enable_z_probe(false);

@@ -77,7 +77,7 @@
   #endif
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "lcd/e3v2/creality/lcd_rts.h"
 #endif
 
@@ -429,7 +429,7 @@ inline void manage_inactivity(const bool no_stepper_sleep=false) {
     SERIAL_ERROR_START();
     SERIAL_ECHOPGM(STR_KILL_PRE);
     SERIAL_ECHOLNPGM(STR_KILL_INACTIVE_TIME, parser.command_ptr);
-    #ifdef RTS_AVAILABLE
+    #ifdef CREALITY_TOUCHSCREEN
       waitway = 0;
       rtscheck.RTS_SndData(ExchangePageBase + 41, ExchangepageAddr);
       change_page_font = 41;
@@ -861,11 +861,11 @@ void idle(bool no_stepper_sleep/*=false*/) {
   #if HAS_CUTTER
     if(laser_device.is_laser_device())
     {
-      TERN(RTS_AVAILABLE, RTSUpdateLaser(),ui.update());
+      TERN(CREALITY_TOUCHSCREEN, RTSUpdateLaser(),ui.update());
     }else
   #endif
   {
-    TERN(RTS_AVAILABLE, RTSUpdate(),ui.update());
+    TERN(CREALITY_TOUCHSCREEN, RTSUpdate(),ui.update());
   }
 
   // Run i2c Position Encoders
@@ -1340,7 +1340,7 @@ void setup() {
   // UI must be initialized before EEPROM
   // (because EEPROM code calls the UI).
 
-  #if ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     #ifdef LCD_SERIAL_PORT
       LCD_SERIAL.begin(LCD_BAUDRATE);
     #endif
@@ -1364,7 +1364,7 @@ void setup() {
   SETUP_RUN(settings.first_load());   // Load data from EEPROM if available (or use defaults)
                                       // This also updates variables in the planner, elsewhere
 
-  #if ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     // TERN_(HAS_M414_COMMAND, lang = language_change_font);
     lang = language_change_font;
   #endif
@@ -1633,7 +1633,7 @@ void setup() {
     SETUP_RUN(DWIN_InitScreen());
   #endif
 
-  #if ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
       delay(500);
       SETUP_RUN(rtscheck.RTS_Init());
   #endif

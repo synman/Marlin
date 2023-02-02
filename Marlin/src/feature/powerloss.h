@@ -105,7 +105,7 @@ typedef struct {
     #endif
   #endif
 
-  #if ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     //recovery flag 
     uint8_t recovery_flag;
   #endif

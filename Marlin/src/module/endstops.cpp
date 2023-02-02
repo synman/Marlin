@@ -54,7 +54,7 @@
   #include "probe.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../lcd/e3v2/creality/lcd_rts.h"
 #endif
 
@@ -461,7 +461,7 @@ void Endstops::not_homing() {
       hit_on_purpose();
     } else {
 
-      #if ENABLED(RTS_AVAILABLE)
+      #if ENABLED(CREALITY_TOUCHSCREEN)
         waitway = 0;
 
         // Displays the exception interface after 3 failures
