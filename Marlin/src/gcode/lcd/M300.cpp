@@ -29,7 +29,7 @@
 #include "../../lcd/marlinui.h" // i2c-based BUZZ
 #include "../../libs/buzzer.h"  // Buzzer, if possible
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../../lcd/e3v2/creality/lcd_rts.h"
 #endif
 
@@ -43,7 +43,7 @@ void GcodeSuite::M300() {
   // Limits the tone duration to 0-5 seconds.
   NOMORE(duration, 5000U);
 
-  #if ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     rtscheck.RTS_SndData(StartSoundSet, SoundAddr);
   #else
     BUZZ(duration, frequency);

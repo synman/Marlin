@@ -52,7 +52,7 @@
   #include "../../../lcd/e3v2/proui/dwin.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../../../lcd/e3v2/creality/lcd_rts.h"
 #endif
 
@@ -738,7 +738,7 @@ G29_TYPE GcodeSuite::G29() {
 
           #endif
 
-          #if ENABLED(RTS_AVAILABLE)
+          #if ENABLED(CREALITY_TOUCHSCREEN)
               if(!IS_SD_PRINTING())
               {
                   rtscheck.RTS_SndData((uint16_t)((100.0 / (GRID_MAX_POINTS_X * GRID_MAX_POINTS_Y) * pt_index) / 2) , AUTO_BED_LEVEL_TITLE_VP);
@@ -963,7 +963,7 @@ G29_TYPE GcodeSuite::G29() {
     process_subcommands_now(F(Z_PROBE_END_SCRIPT));
   #endif
 
-  #if ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     RTS_AutoBedLevelPage();
   #endif
 

@@ -57,7 +57,7 @@ GCodeQueue queue;
   #include "../feature/repeat.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../lcd/e3v2/creality/lcd_rts.h"
 #endif
 
@@ -614,7 +614,7 @@ void GCodeQueue::get_serial_commands() {
       else
         process_stream_char(sd_char, sd_input_state, command.buffer, sd_count);
 
-        #if ENABLED(RTS_AVAILABLE)
+        #if ENABLED(CREALITY_TOUCHSCREEN)
           // the printing results
           if (card_eof)
           {

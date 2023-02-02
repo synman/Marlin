@@ -27,16 +27,41 @@
 #include "../gcode.h"
 #include "../../lcd/marlinui.h"
 
+
+#if ENABLED(CREALITY_TOUCHSCREEN)
+  #include "../../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 /**
  * M117: Set LCD Status Message
  */
 void GcodeSuite::M117() {
+  #if ENABLED(CREALITY_TOUCHSCREEN)
+    // clear out our status areas
+    for(int j = 0 ; j < TEXTBYTELEN ; j ++) {
+      rtscheck.RTS_SndData(0, PRINT_FILE_TEXT_VP + j);
+      rtscheck.RTS_SndData(0, SELECT_FILE_TEXT_VP + j);
+    }
 
-  if (parser.string_arg && parser.string_arg[0])
-    ui.set_status(parser.string_arg, true);
-  else
-    ui.reset_status();
+    if (parser.string_arg && parser.string_arg[0]) {
+      char msg[20];
 
+      if (strlen(parser.string_arg) >= TEXTBYTELEN) {
+        strncpy(msg, parser.string_arg, TEXTBYTELEN - 1);
+        msg[TEXTBYTELEN - 1] = '\0';
+      } else {
+        strcpy(msg, parser.string_arg);
+      }
+
+      rtscheck.RTS_SndData(msg, PRINT_FILE_TEXT_VP);
+      rtscheck.RTS_SndData(msg, SELECT_FILE_TEXT_VP);
+    }
+  #else
+    if (parser.string_arg && parser.string_arg[0])
+      ui.set_status(parser.string_arg, true);
+    else
+      ui.reset_status();
+  #endif
 }
 
 #endif // HAS_STATUS_MESSAGE
