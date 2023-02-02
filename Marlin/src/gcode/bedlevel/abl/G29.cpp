@@ -71,7 +71,7 @@
 #include "../../../module/settings.h"
 #include "../../../sd/cardreader.h"
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../../../lcd/dwin/lcd_rts.h"
 #endif
 
@@ -688,7 +688,7 @@ G29_TYPE GcodeSuite::G29() {
 
           #endif
 
-          #if ENABLED(RTS_AVAILABLE)
+          #if ENABLED(CREALITY_TOUCHSCREEN)
               if(!IS_SD_PRINTING())
               {
                 // if((showcount ++) < GRID_MAX_POINTS_X * GRID_MAX_POINTS_Y)
@@ -936,10 +936,7 @@ G29_TYPE GcodeSuite::G29() {
 
   //do_blocking_move_to_xy(safe_homing_xy);
 
-  #if ENABLED(RTS_AVAILABLE)
-    // G29_flag = false;
-    // Count_probe = 0;
-    // Count_first = 0;
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     RTS_AutoBedLevelPage();
 
   #endif

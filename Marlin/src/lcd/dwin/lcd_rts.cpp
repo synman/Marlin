@@ -50,7 +50,7 @@
   #define LCDSERIAL MYSERIAL2
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
 /*******************************类定义*********************************/
 RTSSHOW rtscheck;
 /********************************END***********************************/

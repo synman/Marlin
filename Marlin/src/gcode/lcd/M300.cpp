@@ -29,6 +29,9 @@
 #include "../../lcd/marlinui.h" // i2c-based BUZZ
 #include "../../libs/buzzer.h"  // Buzzer, if possible
 
+#if ENABLED(CREALITY_TOUCHSCREEN)
+  #include "../../lcd/dwin/lcd_rts.h"
+#endif
 /**
  * M300: Play beep sound S<frequency Hz> P<duration ms>
  */
@@ -39,7 +42,11 @@ void GcodeSuite::M300() {
   // Limits the tone duration to 0-5 seconds.
   NOMORE(duration, 5000U);
 
-  BUZZ(duration, frequency);
+  #if ENABLED(CREALITY_TOUCHSCREEN)
+    rtscheck.RTS_SndData(StartSoundSet, SoundAddr);
+  #else
+    BUZZ(duration, frequency);
+  #endif
 }
 
 #endif // HAS_BUZZER

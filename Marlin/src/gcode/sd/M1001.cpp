@@ -60,7 +60,7 @@
   #include "../../feature/spindle_laser.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../../lcd/dwin/lcd_rts.h"
 #endif
 
@@ -127,14 +127,12 @@ void GcodeSuite::M1001() {
   // Re-select the last printed file in the UI
   TERN_(SD_REPRINT_LAST_SELECTED_FILE, ui.reselect_last_file());
 
-  // 激光雕刻结束
-  #if HAS_CUTTER
-    if(laser_device.is_laser_device()){ 
-      rtscheck.RTS_SndData(ExchangePageBase + 60, ExchangepageAddr);
-      change_page_font = 60;
-    }
-  #endif
-
+  #if BOTH(HAS_CUTTER, CREALITY_TOUCHSCREEN)
+  if(laser_device.is_laser_device()){ 
+    rtscheck.RTS_SndData(ExchangePageBase + 60, ExchangepageAddr);
+    change_page_font = 60;
+  }
+#endif
 }
 
 #endif // SDSUPPORT

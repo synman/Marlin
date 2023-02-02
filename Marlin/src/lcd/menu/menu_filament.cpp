@@ -36,7 +36,7 @@
   #include "../../feature/runout.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../dwin/lcd_rts.h"
 #endif
 
@@ -247,18 +247,18 @@ void menu_pause_option() {
   ACTION_ITEM(MSG_FILAMENT_CHANGE_OPTION_PURGE, []{ pause_menu_response = PAUSE_RESPONSE_EXTRUDE_MORE; });
 
   #if HAS_FILAMENT_SENSOR
-    //¶ÏÁÏ¼ì²âÒý½ÅµÄ×´Ì¬runout.filament_ran_out = 1 ÎªÈ±ÁÏ£¬ 0ÎªºÄ²ÄÒÑ¼ÓÔØ
+    //ï¿½ï¿½ï¿½Ï¼ï¿½ï¿½ï¿½ï¿½ï¿½Åµï¿½×´Ì¬runout.filament_ran_out = 1 ÎªÈ±ï¿½Ï£ï¿½ 0Îªï¿½Ä²ï¿½ï¿½Ñ¼ï¿½ï¿½ï¿½
     const bool still_out = runout.filament_ran_out;  
     if (still_out)
-      EDIT_ITEM(bool, MSG_RUNOUT_SENSOR, &runout.enabled, runout.reset);  //LCD12864²Ëµ¥Ñ¡ÔñÊÇ·ñ¿ªÆô¶ÏÁÏ¼ì²â
+      EDIT_ITEM(bool, MSG_RUNOUT_SENSOR, &runout.enabled, runout.reset);  //LCD12864ï¿½Ëµï¿½Ñ¡ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¼ï¿½ï¿½
   #else
     constexpr bool still_out = false;
   #endif
 
-  if (!still_out)  //~0 ÎªÕæ£¬ËµÃ÷´ËÊ±ºÄ²ÄÒÑ¾­×°ÔØÁË£¬ÐèÒªÓÃ»§È·ÈÏ£¬Ôò¼ÌÐø´òÓ¡
+  if (!still_out)  //~0 Îªï¿½æ£¬Ëµï¿½ï¿½ï¿½ï¿½Ê±ï¿½Ä²ï¿½ï¿½Ñ¾ï¿½×°ï¿½ï¿½ï¿½Ë£ï¿½ï¿½ï¿½Òªï¿½Ã»ï¿½È·ï¿½Ï£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¡
   {
     ACTION_ITEM(MSG_FILAMENT_CHANGE_OPTION_RESUME, []{ pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT; });
-    #if ENABLED(RTS_AVAILABLE)
+    #if ENABLED(CREALITY_TOUCHSCREEN)
         rtscheck.RTS_SndData(ExchangePageBase + 8, ExchangepageAddr);
         change_page_font = 8;
       #if ENABLED(FILAMENT_RUNOUT_SENSOR_DEBUG)

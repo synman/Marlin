@@ -67,7 +67,7 @@
   #include "../feature/PRE01_Power_loss/PRE01_Power_loss.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../lcd/dwin/lcd_rts.h"
 #endif
 
@@ -393,8 +393,9 @@ bool pause_print(const_float_t retract, const xyz_pos_t &park_point, const bool 
     #endif
   #endif
 
-  TERN_(HOST_PROMPT_SUPPORT, host_prompt_open(PROMPT_INFO, PSTR("Pause"), DISMISS_STR));
-  #if ENABLED(RTS_AVAILABLE)
+  TERN_(HOST_PROMPT_SUPPORT, host_prompt_open(PROMPT_INFO, F("Pause"), PSTR(DISMISS_STR)));
+
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     rtscheck.RTS_SndData(ExchangePageBase + 7, ExchangepageAddr);
     change_page_font = 7;
   #endif
@@ -512,7 +513,7 @@ void wait_for_confirmation(const bool is_reload/*=false*/, const int8_t max_beep
   // Start the heater idle timers
   const millis_t nozzle_timeout = SEC_TO_MS(PAUSE_PARK_NOZZLE_TIMEOUT);
 
-  HOTEND_LOOP() thermalManager.heater_idle[e].start(nozzle_timeout); //³¬Ê±Ê±¼äµ½ÁËÖ®ºó¹Ø±ÕÅçÍ·¼ÓÈÈ
+  HOTEND_LOOP() thermalManager.heater_idle[e].start(nozzle_timeout); //ï¿½ï¿½Ê±Ê±ï¿½äµ½ï¿½ï¿½Ö®ï¿½ï¿½Ø±ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½
 
   #if ENABLED(DUAL_X_CARRIAGE)
     const int8_t saved_ext        = active_extruder;
@@ -521,11 +522,12 @@ void wait_for_confirmation(const bool is_reload/*=false*/, const int8_t max_beep
   #endif
 
   // Wait for filament insert by user and press button
-  //µÈ´ýºÄ²Ä²åÈë ÓÃ»§²¢°´ÏÂ¼ÌÐø´òÓ¡µÄ²Ù×÷°´Å¥
+  //ï¿½È´ï¿½ï¿½Ä²Ä²ï¿½ï¿½ï¿½ ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Ó¡ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½Å¥
   KEEPALIVE_STATE(PAUSED_FOR_USER);
-  TERN_(HOST_PROMPT_SUPPORT, host_prompt_do(PROMPT_USER_CONTINUE, GET_TEXT(MSG_NOZZLE_PARKED), CONTINUE_STR));
-  TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired_P(GET_TEXT(MSG_NOZZLE_PARKED)));
-  #if ENABLED(RTS_AVAILABLE)
+  TERN_(HOST_PROMPT_SUPPORT, host_prompt_open(PROMPT_USER_CONTINUE, GET_TEXT_F(MSG_NOZZLE_PARKED), PSTR(CONTINUE_STR)));
+  TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired(GET_TEXT_F(MSG_NOZZLE_PARKED)));
+
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     while (runout.filament_ran_out)
     {
       // SERIAL_ECHOLNPAIR("\r\nwait_for_confirmation_2...");

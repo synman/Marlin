@@ -79,7 +79,7 @@
   #include "lcd/dwin/e3v2/rotary_encoder.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "lcd/dwin/lcd_rts.h"
 #endif
 
@@ -464,7 +464,7 @@ inline void manage_inactivity(const bool ignore_stepper_queue=false) {
 
   if (gcode.stepper_max_timed_out(ms)) {
     SERIAL_ERROR_MSG(STR_KILL_INACTIVE_TIME, parser.command_ptr);
-    #ifdef RTS_AVAILABLE
+    #ifdef CREALITY_TOUCHSCREEN
       waitway = 0;
       rtscheck.RTS_SndData(ExchangePageBase + 41, ExchangepageAddr);
       change_page_font = 41;
@@ -852,11 +852,11 @@ void idle(TERN_(ADVANCED_PAUSE_FEATURE, bool no_stepper_sleep/*=false*/)) {
   #if HAS_CUTTER
     if(laser_device.is_laser_device())
     {
-      TERN(RTS_AVAILABLE, RTSUpdateLaser(),ui.update());
+      TERN(CREALITY_TOUCHSCREEN, RTSUpdateLaser(),ui.update());
     }else
   #endif
   {
-    TERN(RTS_AVAILABLE, RTSUpdate(),ui.update());
+    TERN(CREALITY_TOUCHSCREEN, RTSUpdate(),ui.update());
   }
 
   // #if ENABLED(FIX_MOUNTED_PROBE)
@@ -895,11 +895,11 @@ void idle(TERN_(ADVANCED_PAUSE_FEATURE, bool no_stepper_sleep/*=false*/)) {
   #if HAS_CUTTER
     if(laser_device.is_laser_device())
     {
-      TERN(RTS_AVAILABLE, RTSUpdateLaser(),ui.update());
+      TERN(CREALITY_TOUCHSCREEN, RTSUpdateLaser(),ui.update());
     }else
   #endif
   {
-    TERN(RTS_AVAILABLE, RTSUpdate(),ui.update());
+    TERN(CREALITY_TOUCHSCREEN, RTSUpdate(),ui.update());
   }
   // #if ENABLED(FIX_MOUNTED_PROBE)
   //   if(0 == READ(OPTO_SWITCH_PIN))
@@ -1422,13 +1422,7 @@ void setup() {
   // UI must be initialized before EEPROM
   // (because EEPROM code calls the UI).
 
-  #if ENABLED(DWIN_CREALITY_LCD)
-    delay(800);   // Required delay (since boot?)
-    SERIAL_ECHOPGM("\nDWIN handshake ");
-    if (DWIN_Handshake()) SERIAL_ECHOLNPGM("ok."); else SERIAL_ECHOLNPGM("error.");
-    DWIN_Frame_SetDir(1); // Orientation 90°
-    DWIN_UpdateLCD();     // Show bootscreen (first image)
-  #elif ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     #ifdef LCD_SERIAL_PORT
       LCD_SERIAL.begin(LCD_BAUDRATE);
     #endif
@@ -1461,7 +1455,7 @@ void setup() {
   SETUP_RUN(settings.first_load());   // Load data from EEPROM if available (or use defaults)
                                       // This also updates variables in the planner, elsewhere
 
-  #if ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
     // TERN_(HAS_M414_COMMAND, lang = language_change_font);
     lang = language_change_font;
   #endif
@@ -1728,57 +1722,13 @@ void setup() {
     
   #endif
   
-  //激光模式时 打开激光 107011 -20211013
   #if HAS_CUTTER
     if(laser_device.is_laser_device()) laser_device.laser_power_open();
   #endif
-  #if ENABLED(CREALITY_POWER_LOSS)
-    // delay(500);
-    //SD卡插入，则检测是否异常断电
-    // if(IS_SD_INSERTED())
-    // {
-      // pre01_power_loss.check();
-      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_head: ", pre01_power_loss.info.valid_head);
-      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_foot: ", pre01_power_loss.info.valid_foot);
-      // SERIAL_ECHOLNPAIR("\r\ninfo.recovery_flag: ", pre01_power_loss.info.recovery_flag);
-    // }
-    // else
-    // {
-    //   SERIAL_ECHOLNPAIR("\r\n SD card is not inserted");
-    // }
-  #endif
 
-  #if ENABLED(CREALITY_POWER_LOSS)
-    // delay(500);
-    //SD卡插入，则检测是否异常断电
-    // if(IS_SD_INSERTED())
-    // {
-      // pre01_power_loss.check();
-      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_head: ", pre01_power_loss.info.valid_head);
-      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_foot: ", pre01_power_loss.info.valid_foot);
-      // SERIAL_ECHOLNPAIR("\r\ninfo.recovery_flag: ", pre01_power_loss.info.recovery_flag);
-    // }
-    // else
-    // {
-    //   SERIAL_ECHOLNPAIR("\r\n SD card is not inserted");
-    // }
-  #endif
-
-  #if ENABLED(DWIN_CREALITY_LCD)
-    Encoder_Configuration();
-    HMI_Init();
-    HMI_SetLanguage();            //change default language display,to user set language
-    // DWIN_JPG_CacheTo1(Language_Chinese);
-    HMI_StartFrame(true);
-    // DWIN_StatusChanged(GET_TEXT(WELCOME_MSG));
-  #elif ENABLED(RTS_AVAILABLE)
-        delay(500);
-        SETUP_RUN(rtscheck.RTS_Init());
-    #if ENABLED(FIX_MOUNTED_PROBE)
-      OUT_WRITE(COM_PIN, HIGH);
-      SET_INPUT(OPTO_SWITCH_PIN);
-      OUT_WRITE(LED_CONTROL_PIN, LOW);
-    #endif
+  #if ENABLED(CREALITY_TOUCHSCREEN)
+      delay(500);
+      SETUP_RUN(rtscheck.RTS_Init());
   #endif
 
   #if HAS_SERVICE_INTERVALS && DISABLED(DWIN_CREALITY_LCD)

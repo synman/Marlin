@@ -2895,7 +2895,7 @@
 #define RET6_12864_LCD
 
 // resistive touch screen
-#define RTS_AVAILABLE
+#define CREALITY_TOUCHSCREEN
 
 //
 // Touch Screen Settings

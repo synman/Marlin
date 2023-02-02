@@ -160,7 +160,7 @@
   #include "../lcd/extui/dgus/DGUSDisplayDef.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../lcd/dwin/lcd_rts.h"
 #endif
 
@@ -441,9 +441,9 @@ typedef struct SettingsDataStruct {
     uint8_t caselight_brightness;                        // M355 P
   #endif
 
-#if ENABLED(RTS_AVAILABLE)
-  uint8_t language_change_font;
-#endif
+  #if ENABLED(CREALITY_TOUCHSCREEN)
+    uint8_t language_change_font;
+  #endif
 
   //
   // PASSWORD_FEATURE
@@ -1394,7 +1394,7 @@ void MarlinSettings::postprocess() {
       EEPROM_WRITE(caselight.brightness);
     #endif
 
-    #if ENABLED(RTS_AVAILABLE)
+    #if ENABLED(CREALITY_TOUCHSCREEN)
         EEPROM_WRITE(language_change_font);
     #endif
 
@@ -2315,7 +2315,7 @@ void MarlinSettings::postprocess() {
         EEPROM_READ(caselight.brightness);
       #endif
 
-      #if ENABLED(RTS_AVAILABLE)
+      #if ENABLED(CREALITY_TOUCHSCREEN)
         EEPROM_READ(language_change_font);
         if((language_change_font != 1) &&
           (language_change_font != 2) &&
@@ -2716,7 +2716,7 @@ void MarlinSettings::reset() {
   //
   TERN_(CASELIGHT_USES_BRIGHTNESS, caselight.brightness = CASE_LIGHT_DEFAULT_BRIGHTNESS);
 
-  #if ENABLED(RTS_AVAILABLE)
+  #if ENABLED(CREALITY_TOUCHSCREEN)
       language_change_font = 2;
   #endif
 

@@ -81,7 +81,7 @@
   #include "../lcd/extui/ui_api.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../lcd/dwin/lcd_rts.h"
 #endif
 
@@ -810,8 +810,8 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
   }
 
   if (isnan(measured_z)) {
-    
-    #if ENABLED(RTS_AVAILABLE)
+
+    #if ENABLED(CREALITY_TOUCHSCREEN)
       waitway = 0;
       rtscheck.RTS_SndData(ExchangePageBase + 41, ExchangepageAddr);
       change_page_font = 41;

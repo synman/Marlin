@@ -35,7 +35,7 @@
   #include "../../module/stepper.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../../lcd/dwin/lcd_rts.h"
 #endif
 
@@ -125,7 +125,8 @@ void GcodeSuite::G0_G1(TERN_(HAS_FAST_MOVES, const bool fast_move/*=false*/)) {
     #else
       TERN_(FULL_REPORT_TO_HOST_FEATURE, report_current_grblstate_moving());
     #endif
-    #if ENABLED(RTS_AVAILABLE)
+
+    #if ENABLED(CREALITY_TOUCHSCREEN)
       RTS_PauseMoveAxisPage();
     #endif
   }

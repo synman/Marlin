@@ -105,9 +105,9 @@ typedef struct {
     #endif
   #endif
 
-  #if ENABLED(RTS_AVAILABLE)
-  //recovery flag 
-   uint8_t recovery_flag;
+  #if ENABLED(CREALITY_TOUCHSCREEN)
+    //recovery flag 
+    uint8_t recovery_flag;
   #endif
 
   // SD Filename and position
