@@ -28,6 +28,10 @@
 #include "../../feature/bedlevel/bedlevel.h"
 #include "../../module/probe.h"
 
+#if ENABLED(CREALITY_TOUCHSCREEN)
+  #include "../../lcd/dwin/lcd_rts.h"
+#endif
+
 /**
  * M851: Set the nozzle-to-probe offsets in current units
  */
@@ -43,6 +47,12 @@ void GcodeSuite::M851() {
       #endif
       , probe.offset.z
     );
+
+    #if ENABLED(CREALITY_TOUCHSCREEN)
+      zprobe_zoffset = probe.offset.z;
+      rtscheck.RTS_SndData(probe.offset.z * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
+    #endif
+
     return;
   }
 
