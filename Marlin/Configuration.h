@@ -60,7 +60,9 @@
 // @section info
 
 //  #define ENDER_3S1_PLUS
-#define ENDER_3S1_PRO
+#ifndef ENDER_MACHINE_OVERRIDE
+  #define ENDER_3S1_PRO
+#endif
   
 // 主控芯片
 #ifdef MCU_STM32F401RC
@@ -75,9 +77,9 @@
    */
   #ifndef SHORT_BUILD_VERSION
     #if ENABLED(USER_STM32F103)
-      #define SHORT_BUILD_VERSION "2.1.2.24F1-SMS" //F103版本
+      #define SHORT_BUILD_VERSION "2.1.x-F1" //F103版本
     #elif ENABLED(USER_STM32F401)
-      #define SHORT_BUILD_VERSION "2.1.2.24F4-SMS" // F401版本
+      #define SHORT_BUILD_VERSION "2.1.x-F4" // F401版本
     #endif
   #endif
 
@@ -87,7 +89,15 @@
   #define MACVERSION        STRING_CONFIG_H_AUTHOR
   #define SOFTVERSION       SHORT_BUILD_VERSION
   #define MACHINE_TYPE      "Ender-3 S1 Pro"
-  #define FIRMWARE_VERSION  "2.1.2"
+
+  #ifndef ENDER_MACHINE_OVERRIDE
+    #define FIRMWARE_VERSION  "2.1.x-PA"
+  #elif ENABLED(AUTO_BED_LEVELING_ABL)
+    #define FIRMWARE_VERSION  "2.1.x-PA"
+  #else
+      #define FIRMWARE_VERSION  "2.1.x-PU"
+  #endif
+
   #define SCREEN_VERSION    "UI20" 
   #define SCREEN_HW_VERSION "DWIN2021"
   #define HARDWARE_VERSION  "CR-FDM-v24S1_301"
@@ -103,9 +113,9 @@
    */
   #ifndef SHORT_BUILD_VERSION
     #if ENABLED(USER_STM32F103)
-      #define SHORT_BUILD_VERSION "2.1.2.24F1-SMS" //F103版本
+      #define SHORT_BUILD_VERSION "2.1.x-F1" //F103版本
     #elif ENABLED(USER_STM32F401)
-      #define SHORT_BUILD_VERSION "2.1.2.24F4-SMS" // F401版本
+      #define SHORT_BUILD_VERSION "2.1.x-F4" // F401版本
     #endif
   #endif
 
@@ -115,7 +125,15 @@
   #define MACVERSION        STRING_CONFIG_H_AUTHOR
   #define SOFTVERSION       SHORT_BUILD_VERSION
   #define MACHINE_TYPE      "Ender-3 S1 Plus"
-  #define FIRMWARE_VERSION  "2.1.2"
+
+  #ifndef ENDER_MACHINE_OVERRIDE
+    #define FIRMWARE_VERSION  "2.1.x-+A"
+  #elif ENABLED(AUTO_BED_LEVELING_ABL)
+    #define FIRMWARE_VERSION  "2.1.x-+A"
+  #else
+      #define FIRMWARE_VERSION  "2.1.x-+U"
+  #endif
+
   #define SCREEN_VERSION    "UI20"
   #define SCREEN_HW_VERSION "DWIN2021"
   #define HARDWARE_VERSION  "CR-FDM-v24S1_301"
@@ -1639,11 +1657,14 @@
  *     |    [-]    |
  *     O-- FRONT --+
  */
-#define NOZZLE_TO_PROBE_OFFSET { -31.5, -41.8, 0 }
+
+#define NOZZLE_TO_PROBE_OFFSET_X -31.5
+#define NOZZLE_TO_PROBE_OFFSET_Y -41.8
+#define NOZZLE_TO_PROBE_OFFSET { NOZZLE_TO_PROBE_OFFSET_X, NOZZLE_TO_PROBE_OFFSET_Y, 0 }
 
 // Most probes should stay away from the edges of the bed, but
 // with NOZZLE_AS_PROBE this can be negative for a wider probing area.
-#define PROBING_MARGIN 5
+// #define PROBING_MARGIN 5
 
 // X and Y axis travel speed (mm/min) between probes
 // #define XY_PROBE_FEEDRATE (133*60)
@@ -1724,16 +1745,16 @@
 #define Z_CLEARANCE_DEPLOY_PROBE   10 // Z Clearance for Deploy/Stow
 #define Z_CLEARANCE_BETWEEN_PROBES  5 // Z Clearance between probe points
 #define Z_CLEARANCE_MULTI_PROBE     5 // Z Clearance between multiple probes
-//#define Z_AFTER_PROBING           5 // Z position after probing is done
+#define Z_AFTER_PROBING            10 // Z position after probing is done
 
 #define Z_PROBE_LOW_POINT          -2 // Farthest distance below the trigger-point to go before stopping
 
 // For M851 give a range for adjusting the Z probe offset
-#define Z_PROBE_OFFSET_RANGE_MIN -5 // -10   20210713_rock
+#define Z_PROBE_OFFSET_RANGE_MIN -10   
 #define Z_PROBE_OFFSET_RANGE_MAX 10
 
 // Enable the M48 repeatability test to test probe accuracy
-//#define Z_MIN_PROBE_REPEATABILITY_TEST
+#define Z_MIN_PROBE_REPEATABILITY_TEST
 
 // Before deploy/stow pause for user confirmation
 //#define PAUSE_BEFORE_DEPLOY_STOW
@@ -1856,12 +1877,12 @@
 
 #if ENABLED(ENDER_3S1_PRO)
   // The size of the printable area
-  #define X_BED_SIZE 220
-  #define Y_BED_SIZE 220
+  #define X_BED_SIZE 235
+  #define Y_BED_SIZE 235
 
   // Travel limits (mm) after homing, corresponding to endstop positions.
-  #define X_MIN_POS -9
-  #define Y_MIN_POS -6
+  #define X_MIN_POS 0
+  #define Y_MIN_POS 0
   #define Z_MIN_POS 0
   #define X_MAX_POS X_BED_SIZE 
   #define Y_MAX_POS Y_BED_SIZE 
@@ -2052,8 +2073,10 @@
  */
 //#define AUTO_BED_LEVELING_3POINT
 //#define AUTO_BED_LEVELING_LINEAR
-// #define AUTO_BED_LEVELING_BILINEAR
-#define AUTO_BED_LEVELING_UBL
+#ifndef ENDER_MACHINE_OVERRIDE
+  #define AUTO_BED_LEVELING_BILINEAR
+#endif
+// #define AUTO_BED_LEVELING_UBL
 //#define MESH_BED_LEVELING
 
 /**
@@ -2097,7 +2120,7 @@
  * Turn on with the command 'M111 S32'.
  * NOTE: Requires a lot of PROGMEM!
  */
-#define DEBUG_LEVELING_FEATURE
+//#define DEBUG_LEVELING_FEATURE
 
 #if ANY(MESH_BED_LEVELING, AUTO_BED_LEVELING_UBL, PROBE_MANUALLY)
   // Set a height for the start of manual adjustment
@@ -2174,7 +2197,10 @@
 
   //#define MESH_EDIT_GFX_OVERLAY   // Display a graphics overlay while editing the mesh
 
-  #define MESH_INSET 1              // Set Mesh bounds as an inset region of the bed
+  #define MESH_INSET 1             // Set Mesh bounds as an inset region of the bed
+  #define MESH_INSET_X ((NOZZLE_TO_PROBE_OFFSET_X * -1) + MESH_INSET)
+  #define MESH_INSET_Y ((NOZZLE_TO_PROBE_OFFSET_Y * -1) + MESH_INSET)
+
   #define GRID_MAX_POINTS_X 5      // Don't use more than 15 points per axis, implementation limited.
   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
 

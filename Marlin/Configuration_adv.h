@@ -2206,6 +2206,10 @@
   //#define MESH_MIN_Y MESH_INSET
   //#define MESH_MAX_X X_BED_SIZE - (MESH_INSET)
   //#define MESH_MAX_Y Y_BED_SIZE - (MESH_INSET)
+  #define MESH_MIN_X MESH_INSET_X
+  #define MESH_MIN_Y MESH_INSET_Y
+  #define MESH_MAX_X (X_BED_SIZE - MESH_INSET_X)
+  #define MESH_MAX_Y (Y_BED_SIZE - MESH_INSET_Y)
 #endif
 
 #if BOTH(AUTO_BED_LEVELING_UBL, EEPROM_SETTINGS)
@@ -3690,7 +3694,7 @@
 // @section reporting
 
 // Extra options for the M114 "Current Position" report
-#define M114_DETAIL         // Use 'M114` for details to check planner calculations
+//#define M114_DETAIL         // Use 'M114` for details to check planner calculations
 //#define M114_REALTIME       // Real current position based on forward kinematics
 //#define M114_LEGACY         // M114 used to synchronize on every call. Enable if needed.
 
