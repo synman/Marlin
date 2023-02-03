@@ -37,6 +37,10 @@
   #include "../../feature/bedlevel/bedlevel.h"
 #endif
 
+#if ENABLED(CREALITY_TOUCHSCREEN)
+  #include "../../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 #if ENABLED(BABYSTEP_ZPROBE_OFFSET)
 
   FORCE_INLINE void mod_probe_offset(const_float_t offs) {
@@ -92,6 +96,11 @@ void GcodeSuite::M290() {
 
     #if ENABLED(BABYSTEP_ZPROBE_OFFSET)
       SERIAL_ECHOLNPGM(STR_PROBE_OFFSET " " STR_Z, probe.offset.z);
+
+      #if ENABLED(CREALITY_TOUCHSCREEN)
+        zprobe_zoffset = probe.offset.z;
+        rtscheck.RTS_SndData(probe.offset.z * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
+      #endif
     #endif
 
     #if ENABLED(BABYSTEP_HOTEND_Z_OFFSET)
