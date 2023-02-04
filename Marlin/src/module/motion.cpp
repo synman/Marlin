@@ -71,7 +71,7 @@
   #include "../feature/babystep.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../lcd/dwin/lcd_rts.h"
 #endif
 

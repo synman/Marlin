@@ -393,8 +393,7 @@ bool pause_print(const_float_t retract, const xyz_pos_t &park_point, const bool 
     #endif
   #endif
 
-  TERN_(HOST_PROMPT_SUPPORT, host_prompt_open(PROMPT_INFO, F("Pause"), PSTR(DISMISS_STR)));
-
+  TERN_(HOST_PROMPT_SUPPORT, host_prompt_open(PROMPT_INFO, PSTR("Pause"), DISMISS_STR));
   #if ENABLED(CREALITY_TOUCHSCREEN)
     rtscheck.RTS_SndData(ExchangePageBase + 7, ExchangepageAddr);
     change_page_font = 7;
@@ -524,9 +523,8 @@ void wait_for_confirmation(const bool is_reload/*=false*/, const int8_t max_beep
   // Wait for filament insert by user and press button
   //�ȴ��ĲĲ��� �û������¼�����ӡ�Ĳ�����ť
   KEEPALIVE_STATE(PAUSED_FOR_USER);
-  TERN_(HOST_PROMPT_SUPPORT, host_prompt_open(PROMPT_USER_CONTINUE, GET_TEXT_F(MSG_NOZZLE_PARKED), PSTR(CONTINUE_STR)));
-  TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired(GET_TEXT_F(MSG_NOZZLE_PARKED)));
-
+  TERN_(HOST_PROMPT_SUPPORT, host_prompt_do(PROMPT_USER_CONTINUE, GET_TEXT(MSG_NOZZLE_PARKED), CONTINUE_STR));
+  TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired_P(GET_TEXT(MSG_NOZZLE_PARKED)));
   #if ENABLED(CREALITY_TOUCHSCREEN)
     while (runout.filament_ran_out)
     {

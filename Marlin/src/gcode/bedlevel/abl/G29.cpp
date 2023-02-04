@@ -229,7 +229,7 @@ G29_TYPE GcodeSuite::G29() {
   TERN_(FULL_REPORT_TO_HOST_FEATURE, set_and_report_grblstate(M_PROBE));
 
   reset_stepper_timeout();
-// #if ENABLED(RTS_AVAILABLE)
+// #if ENABLED(CREALITY_TOUCHSCREEN)
 //   G29_flag = true;
 //   Count_probe = 0;
 // #endif
@@ -620,7 +620,7 @@ G29_TYPE GcodeSuite::G29() {
 
       // Outer loop is X with PROBE_Y_FIRST enabled
       // Outer loop is Y with PROBE_Y_FIRST disabled
-    #if ENABLED(RTS_AVAILABLE)
+    #if ENABLED(CREALITY_TOUCHSCREEN)
       for (PR_OUTER_VAR = 0 ; PR_OUTER_VAR < PR_OUTER_SIZE && !isnan(abl.measured_z); PR_OUTER_VAR++) {
     #else
       for (PR_OUTER_VAR = 0 ; PR_OUTER_VAR < PR_OUTER_SIZE && !isnan(abl.measured_z); PR_OUTER_VAR++) {

@@ -676,8 +676,8 @@ volatile bool Temperature::raw_temps_ready = false;
                 temp_change_ms = ms + SEC_TO_MS(watch_temp_period);     // - move the expiration timer up
                 if (current_temp > watch_temp_target) heated = true;  // - Flag if target temperature reached
               }
-              else if (ELAPSED(ms, temp_change_ms)) {                 // Watch timer expired
-
+              else if (ELAPSED(ms, temp_change_ms))                   // Watch timer expired
+              {
                 #if ENABLED(CREALITY_TOUCHSCREEN)
                   rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
                   change_page_font = 31;
@@ -685,14 +685,13 @@ volatile bool Temperature::raw_temps_ready = false;
                 _temp_error(heater_id, str_t_heating_failed, GET_TEXT(MSG_HEATING_FAILED_LCD));
               }
             }
-            else if (current_temp < target - (MAX_OVERSHOOT_PID_AUTOTUNE)) { // Heated, then temperature fell too far?
-
-                #if ENABLED(CREALITY_TOUCHSCREEN)
-                  rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
-                  change_page_font = 31;
-                #endif 
-
-              _temp_error(heater_id, FPSTR(str_t_thermal_runaway), GET_TEXT_F(MSG_THERMAL_RUNAWAY));
+            else if (current_temp < target - (MAX_OVERSHOOT_PID_AUTOTUNE)) // Heated, then temperature fell too far?
+            {
+              #if ENABLED(CREALITY_TOUCHSCREEN)
+                rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
+                change_page_font = 31;
+              #endif
+              _temp_error(heater_id, str_t_thermal_runaway, GET_TEXT(MSG_THERMAL_RUNAWAY));
             }
           }
         #endif
@@ -705,9 +704,6 @@ volatile bool Temperature::raw_temps_ready = false;
       if ((ms - _MIN(t1, t2)) > (MAX_CYCLE_TIME_PID_AUTOTUNE * 60L * 1000L)) {
         TERN_(DWIN_CREALITY_LCD, DWIN_Popup_Temperature(0));
         TERN_(EXTENSIBLE_UI, ExtUI::onPidTuning(ExtUI::result_t::PID_TUNING_TIMEOUT));
-        TERN_(HOST_PROMPT_SUPPORT, hostui.notify(GET_TEXT_F(MSG_PID_TIMEOUT)));
-        SERIAL_ECHOPGM(STR_PID_AUTOTUNE);
-
         #if ENABLED(CREALITY_TOUCHSCREEN)
           rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
           change_page_font = 31;
@@ -983,7 +979,6 @@ void Temperature::max_temp_error(const heater_id_t heater_id) {
   #if ENABLED(DWIN_CREALITY_LCD) && (HAS_HOTEND || HAS_HEATED_BED)
     DWIN_Popup_Temperature(1);
   #endif
-
   #if ENABLED(CREALITY_TOUCHSCREEN) && (HAS_HOTEND || HAS_HEATED_BED)
     rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
     change_page_font = 31;
@@ -995,7 +990,6 @@ void Temperature::min_temp_error(const heater_id_t heater_id) {
   #if ENABLED(DWIN_CREALITY_LCD) && (HAS_HOTEND || HAS_HEATED_BED)
     DWIN_Popup_Temperature(0);
   #endif
-
   #if ENABLED(CREALITY_TOUCHSCREEN) && (HAS_HOTEND || HAS_HEATED_BED)
     rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
     change_page_font = 31;
@@ -1279,14 +1273,13 @@ void Temperature::manage_heater() {
 
     HOTEND_LOOP() {
       #if ENABLED(THERMAL_PROTECTION_HOTENDS)
-        if (degHotend(e) > temp_range[e].maxtemp) {
-
-            #if ENABLED(CREALITY_TOUCHSCREEN)
-              rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
-              change_page_font = 31;
-            #endif
-
-           maxtemp_error((heater_id_t)e);
+        if (degHotend(e) > temp_range[e].maxtemp) 
+        {
+          #if ENABLED(CREALITY_TOUCHSCREEN)
+            rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
+            change_page_font = 31;
+          #endif
+          max_temp_error((heater_id_t)e);
         }
       #endif
 
@@ -1305,8 +1298,7 @@ void Temperature::manage_heater() {
           if (watch_hotend[e].check(degHotend(e)))  // Increased enough?
             start_watching_hotend(e);               // If temp reached, turn off elapsed check
           else {
-            TERN_(HAS_DWIN_E3V2_BASIC, DWIN_Popup_Temperature(0));
-
+            TERN_(DWIN_CREALITY_LCD, DWIN_Popup_Temperature(0));
             #if ENABLED(CREALITY_TOUCHSCREEN)
               rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
               change_page_font = 31;
@@ -1343,12 +1335,14 @@ void Temperature::manage_heater() {
 
   #if HAS_HEATED_BED
 
-          #if ENABLED(CREALITY_TOUCHSCREEN)
-            rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
-            change_page_font = 31;
-          #endif
-
-         maxtemp_error(H_BED);
+    #if ENABLED(THERMAL_PROTECTION_BED)
+      if (degBed() > BED_MAXTEMP) 
+      {
+        #if ENABLED(CREALITY_TOUCHSCREEN)
+          rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
+          change_page_font = 31;
+        #endif
+        max_temp_error(H_BED);
       }
     #endif
 
@@ -1358,7 +1352,6 @@ void Temperature::manage_heater() {
         if (watch_bed.check(degBed()))          // Increased enough?
           start_watching_bed();                 // If temp reached, turn off elapsed check
         else {
-
           #if ENABLED(CREALITY_TOUCHSCREEN)
             rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
             change_page_font = 31;
@@ -2499,7 +2492,6 @@ void Temperature::init() {
         state = TRRunaway;
 
       case TRRunaway:
-
         #if ENABLED(CREALITY_TOUCHSCREEN)
           rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
           change_page_font = 31;
@@ -3651,7 +3643,7 @@ void Temperature::isr() {
 
       if (wait_for_heatup) {
         wait_for_heatup = false;
-        #if ENABLED(RTS_AVAILABLE)
+        #if ENABLED(CREALITY_TOUCHSCREEN)
           Update_Time_Value = RTS_UPDATE_VALUE;
           rtscheck.RTS_SndData(ExchangePageBase + 10, ExchangepageAddr);
         #endif
@@ -3796,12 +3788,6 @@ void Temperature::isr() {
 
       if (wait_for_heatup) {
         wait_for_heatup = false;
-
-        #if ENABLED(CREALITY_TOUCHSCREEN)
-          Update_Time_Value = RTS_UPDATE_VALUE;
-          rtscheck.RTS_SndData(ExchangePageBase + 10, ExchangepageAddr);
-        #endif
-
         ui.reset_status();
         return true;
       }

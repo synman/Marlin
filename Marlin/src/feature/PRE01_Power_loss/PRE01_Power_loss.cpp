@@ -40,7 +40,7 @@
   #include "fwretract.h"
 #endif
 
-#if ENABLED(RTS_AVAILABLE)
+#if ENABLED(CREALITY_TOUCHSCREEN)
   #include "../../lcd/dwin/lcd_rts.h"
 #endif
 
@@ -318,7 +318,7 @@ void PRE01PowerLoss::save(const bool force/*=false*/, const float zraise/*=POWER
     info.flag.dryrun = !!(marlin_debug_flags & MARLIN_DEBUG_DRYRUN);
     info.flag.allow_cold_extrusion = TERN0(PREVENT_COLD_EXTRUSION, thermalManager.allow_cold_extrude);
 
-    #if ENABLED(RTS_AVAILABLE)
+    #if ENABLED(CREALITY_TOUCHSCREEN)
       //recovery flag 
       // info.recovery_flag = true;
       info.recovery_flag = PoweroffContinue;

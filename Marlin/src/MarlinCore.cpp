@@ -1422,7 +1422,13 @@ void setup() {
   // UI must be initialized before EEPROM
   // (because EEPROM code calls the UI).
 
-  #if ENABLED(CREALITY_TOUCHSCREEN)
+  #if ENABLED(DWIN_CREALITY_LCD)
+    delay(800);   // Required delay (since boot?)
+    SERIAL_ECHOPGM("\nDWIN handshake ");
+    if (DWIN_Handshake()) SERIAL_ECHOLNPGM("ok."); else SERIAL_ECHOLNPGM("error.");
+    DWIN_Frame_SetDir(1); // Orientation 90°
+    DWIN_UpdateLCD();     // Show bootscreen (first image)
+  #elif ENABLED(CREALITY_TOUCHSCREEN)
     #ifdef LCD_SERIAL_PORT
       LCD_SERIAL.begin(LCD_BAUDRATE);
     #endif
@@ -1726,9 +1732,53 @@ void setup() {
     if(laser_device.is_laser_device()) laser_device.laser_power_open();
   #endif
 
-  #if ENABLED(CREALITY_TOUCHSCREEN)
-      delay(500);
-      SETUP_RUN(rtscheck.RTS_Init());
+  #if ENABLED(CREALITY_POWER_LOSS)
+    // delay(500);
+    //SD卡插入，则检测是否异常断电
+    // if(IS_SD_INSERTED())
+    // {
+      // pre01_power_loss.check();
+      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_head: ", pre01_power_loss.info.valid_head);
+      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_foot: ", pre01_power_loss.info.valid_foot);
+      // SERIAL_ECHOLNPAIR("\r\ninfo.recovery_flag: ", pre01_power_loss.info.recovery_flag);
+    // }
+    // else
+    // {
+    //   SERIAL_ECHOLNPAIR("\r\n SD card is not inserted");
+    // }
+  #endif
+
+  #if ENABLED(CREALITY_POWER_LOSS)
+    // delay(500);
+    //SD卡插入，则检测是否异常断电
+    // if(IS_SD_INSERTED())
+    // {
+      // pre01_power_loss.check();
+      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_head: ", pre01_power_loss.info.valid_head);
+      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_foot: ", pre01_power_loss.info.valid_foot);
+      // SERIAL_ECHOLNPAIR("\r\ninfo.recovery_flag: ", pre01_power_loss.info.recovery_flag);
+    // }
+    // else
+    // {
+    //   SERIAL_ECHOLNPAIR("\r\n SD card is not inserted");
+    // }
+  #endif
+
+  #if ENABLED(DWIN_CREALITY_LCD)
+    Encoder_Configuration();
+    HMI_Init();
+    HMI_SetLanguage();            //change default language display,to user set language
+    // DWIN_JPG_CacheTo1(Language_Chinese);
+    HMI_StartFrame(true);
+    // DWIN_StatusChanged(GET_TEXT(WELCOME_MSG));
+  #elif ENABLED(CREALITY_TOUCHSCREEN)
+        delay(500);
+        SETUP_RUN(rtscheck.RTS_Init());
+    #if ENABLED(FIX_MOUNTED_PROBE)
+      OUT_WRITE(COM_PIN, HIGH);
+      SET_INPUT(OPTO_SWITCH_PIN);
+      OUT_WRITE(LED_CONTROL_PIN, LOW);
+    #endif
   #endif
 
   #if HAS_SERVICE_INTERVALS && DISABLED(DWIN_CREALITY_LCD)
