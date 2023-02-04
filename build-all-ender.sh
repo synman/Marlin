@@ -1,9 +1,11 @@
 #!/bin/zsh
 
-branch="$(git rev-parse --abbrev-ref HEAD)"
-buildhome="/Users/shell/Documents/GitHub/Marlin/.pio/build"
-firmhome="/Users/shell/Documents/GitHub/Ender-3-S1-Pro-Firmware/$branch"
+home="$(echo ~)"
 curdir="$(pwd)"
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+buildhome="$curdir/.pio/build"
+firmhome="$home/Documents/GitHub/Ender-3-S1-Pro-Firmware/$branch"
 
 declare -a f1_build_variants=(STM32F103RE_creality_s1pro_abl STM32F103RE_creality_s1pro_ubl STM32F103RE_creality_s1plus_abl STM32F103RE_creality_s1plus_ubl)
 declare -a f4_build_variants=(STM32F401RC_creality_s1pro_abl STM32F401RC_creality_s1pro_ubl STM32F401RC_creality_s1plus_abl STM32F401RC_creality_s1plus_ubl)

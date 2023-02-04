@@ -37,7 +37,6 @@
  * M300: Play beep sound S<frequency Hz> P<duration ms>
  */
 void GcodeSuite::M300() {
-  uint16_t const frequency = parser.ushortval('S', 260);
   uint16_t duration = parser.ushortval('P', 1000);
 
   // Limits the tone duration to 0-5 seconds.
@@ -46,6 +45,7 @@ void GcodeSuite::M300() {
   #if ENABLED(CREALITY_TOUCHSCREEN)
     rtscheck.RTS_SndData(StartSoundSet, SoundAddr);
   #else
+    uint16_t const frequency = parser.ushortval('S', 260);
     BUZZ(duration, frequency);
   #endif
 }

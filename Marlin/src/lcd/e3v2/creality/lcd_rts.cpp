@@ -987,7 +987,15 @@ void RTSSHOW::RTS_HandleData(void)
         }
 
         if(axes_should_home())  queue.enqueue_one_P(PSTR("G28"));
-        queue.enqueue_one_P(PSTR("G29"));
+
+        #if ENABLED(AUTO_BED_LEVELING_BILINEAR) 
+          queue.enqueue_one_P(PSTR("G29"));
+        #else
+          queue.enqueue_one_P(PSTR("G29 P1 T"));
+          queue.enqueue_one_P(PSTR("G29 P3"));
+          queue.enqueue_one_P(PSTR("G29 S1"));
+        #endif
+
         //queue.enqueue_one_P(PSTR("G28\nG29"));
 
         RTS_SndData(0, MOTOR_FREE_ICON_VP);
@@ -1369,6 +1377,7 @@ void RTSSHOW::RTS_HandleData(void)
 
         probe.offset.z = zprobe_zoffset;
         RTS_SndData(zprobe_zoffset * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
+        SERIAL_ECHOLNPGM(STR_PROBE_OFFSET " " STR_Z, probe.offset.z);
       }
       // settings.save();
       break;
