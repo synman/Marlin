@@ -127,9 +127,9 @@
    */
   #ifndef SHORT_BUILD_VERSION
     #if ENABLED(USER_STM32F103)
-      #define SHORT_BUILD_VERSION "2.1.x-F1" //F103版本
+      #define SHORT_BUILD_VERSION "2.0.8-F1" //F103版本
     #elif ENABLED(USER_STM32F401)
-      #define SHORT_BUILD_VERSION "2.1.x-F4" // F401版本
+      #define SHORT_BUILD_VERSION "2.0.8-F4" // F401版本
     #endif
   #endif
 
@@ -141,11 +141,11 @@
   #define MACHINE_TYPE      "Ender-3 S1 Plus"
 
   #ifndef ENDER_MACHINE_OVERRIDE
-    #define FIRMWARE_VERSION  "2.1.x-+A"
+    #define FIRMWARE_VERSION  "2.0.8-+A"
   #elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
-    #define FIRMWARE_VERSION  "2.1.x-+A"
+    #define FIRMWARE_VERSION  "2.0.8-+A"
   #else
-      #define FIRMWARE_VERSION  "2.1.x-+U"
+      #define FIRMWARE_VERSION  "2.0.8-+U"
   #endif
 
   #define SCREEN_VERSION    "UI20"
