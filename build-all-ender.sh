@@ -30,14 +30,16 @@ for variant in "${f1_build_variants[@]}"
 do
     mkdir -p $firmhome/$variant
     cp $buildhome/$variant/*.bin $firmhome/$variant/
-    zip -rm $variant.zip $variant
+    variantshort="$(echo $variant | sed 's/STM32F103RE_creality_/F1-/')" 
+    zip -rm $branch-$variantshort.zip $variant
 done
 
 for variant in "${f4_build_variants[@]}"
 do
     mkdir -p $firmhome/$variant/STM32F4_UPDATE
     cp $buildhome/$variant/*.bin $firmhome/$variant/STM32F4_UPDATE/
-    zip -rm $variant.zip $variant
+    variantshort="$(echo $variant | sed 's/STM32F401RC_creality_/F4-/')" 
+    zip -rm $branch-$variantshort.zip $variant
 done
 
 cd $curdir
