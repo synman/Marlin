@@ -25,11 +25,9 @@
 #if ENABLED(SDSUPPORT)
 
 #include "../gcode.h"
+#include "../../module/planner.h"
 #include "../../module/printcounter.h"
-
-#if DISABLED(NO_SD_AUTOSTART)
-  #include "../../sd/cardreader.h"
-#endif
+#include "../../sd/cardreader.h"
 
 #ifdef SD_FINISHED_RELEASECOMMAND
   #include "../queue.h"
@@ -41,6 +39,8 @@
 
 #if ENABLED(POWER_LOSS_RECOVERY)
   #include "../../feature/powerloss.h"
+#elif ENABLED(CREALITY_POWER_LOSS)
+  #include "../../feature/PRE01_Power_loss/PRE01_Power_loss.h"
 #endif
 
 #if HAS_LEDS_OFF_FLAG
@@ -56,6 +56,14 @@
   #include "../../feature/host_actions.h"
 #endif
 
+#if HAS_CUTTER
+  #include "../../feature/spindle_laser.h"
+#endif
+
+#if ENABLED(RTS_AVAILABLE)
+  #include "../../lcd/dwin/lcd_rts.h"
+#endif
+
 #ifndef PE_LEDS_COMPLETED_TIME
   #define PE_LEDS_COMPLETED_TIME (30*60)
 #endif
@@ -64,16 +72,21 @@
  * M1001: Execute actions for SD print completion
  */
 void GcodeSuite::M1001() {
+  planner.synchronize();
+
+  // SD Printing is finished when the queue reaches M1001
+  card.flag.sdprinting = card.flag.sdprintdone = false;
+
   // If there's another auto#.g file to run...
   if (TERN(NO_SD_AUTOSTART, false, card.autofile_check())) return;
 
   // Purge the recovery file...
   TERN_(POWER_LOSS_RECOVERY, recovery.purge());
+  TERN_(CREALITY_POWER_LOSS, pre01_power_loss.purge());
 
   // Report total print time
   const bool long_print = print_job_timer.duration() > 60;
   if (long_print) gcode.process_subcommands_now_P(PSTR("M31"));
-
   // Stop the print job timer
   gcode.process_subcommands_now_P(PSTR("M77"));
 
@@ -99,13 +112,29 @@ void GcodeSuite::M1001() {
 
   // Inject SD_FINISHED_RELEASECOMMAND, if any
   #ifdef SD_FINISHED_RELEASECOMMAND
-    gcode.process_subcommands_now_P(PSTR(SD_FINISHED_RELEASECOMMAND));
+    #if HAS_CUTTER
+      if(laser_device.is_laser_device())
+      {  
+      }else
+    #endif
+    {
+      gcode.process_subcommands_now_P(PSTR(SD_FINISHED_RELEASECOMMAND));
+    }
   #endif
 
   TERN_(EXTENSIBLE_UI, ExtUI::onPrintFinished());
 
   // Re-select the last printed file in the UI
   TERN_(SD_REPRINT_LAST_SELECTED_FILE, ui.reselect_last_file());
+
+  // 激光雕刻结束
+  #if HAS_CUTTER
+    if(laser_device.is_laser_device()){ 
+      rtscheck.RTS_SndData(ExchangePageBase + 60, ExchangepageAddr);
+      change_page_font = 60;
+    }
+  #endif
+
 }
 
 #endif // SDSUPPORT

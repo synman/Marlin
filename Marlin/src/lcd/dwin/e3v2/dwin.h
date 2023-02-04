@@ -100,6 +100,7 @@ enum processID : uint8_t {
 
   // Window ID
   Print_window,
+  Filament_window,
   Popup_Window
 };
 
@@ -307,7 +308,6 @@ typedef struct {
 
 extern HMI_value_t HMI_ValueStruct;
 extern HMI_Flag_t HMI_flag;
-
 // Show ICO
 void ICON_Print(bool show);
 void ICON_Prepare(bool show);
@@ -402,11 +402,16 @@ void HMI_Step();            // Transmission ratio
 void HMI_Init();
 void DWIN_Update();
 void EachMomentUpdate();
+void Check_Filament_Update(void);
 void DWIN_HandleScreen();
-void DWIN_StatusChanged(const char *text);
+// void DWIN_StatusChanged(const char *text);
 void DWIN_Draw_Checkbox(uint16_t color, uint16_t bcolor, uint16_t x, uint16_t y, bool mode /* = false*/);
 
 inline void DWIN_StartHoming() { HMI_flag.home_flag = true; }
 
 void DWIN_CompletedHoming();
 void DWIN_CompletedLeveling();
+void HMI_SetLanguage();
+
+
+void Popup_window_Filament(void);

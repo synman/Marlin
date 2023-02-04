@@ -51,11 +51,22 @@ GCodeQueue queue;
 
 #if ENABLED(POWER_LOSS_RECOVERY)
   #include "../feature/powerloss.h"
+#elif ENABLED(CREALITY_POWER_LOSS)
+  #include "../feature/PRE01_Power_loss/PRE01_Power_loss.h"
 #endif
 
 #if ENABLED(GCODE_REPEAT_MARKERS)
   #include "../feature/repeat.h"
 #endif
+
+#if ENABLED(RTS_AVAILABLE)
+  #include "../lcd/dwin/lcd_rts.h"
+#endif
+
+#if HAS_CUTTER
+  #include "../feature/spindle_laser.h"
+#endif
+
 
 // Frequently used G-code strings
 PGMSTR(G28_STR, "G28");
@@ -84,13 +95,12 @@ char GCodeQueue::injected_commands[64]; // = { 0 }
 
 
 void GCodeQueue::RingBuffer::commit_command(bool skip_ok
-  #if HAS_MULTI_SERIAL
-    , serial_index_t serial_ind/*=-1*/
-  #endif
+  OPTARG(HAS_MULTI_SERIAL, serial_index_t serial_ind/*=-1*/)
 ) {
   commands[index_w].skip_ok = skip_ok;
   TERN_(HAS_MULTI_SERIAL, commands[index_w].port = serial_ind);
   TERN_(POWER_LOSS_RECOVERY, recovery.commit_sdpos(index_w));
+  TERN_(CREALITY_POWER_LOSS, pre01_power_loss.commit_sdpos(index_w));
   advance_pos(index_w, 1);
 }
 
@@ -100,9 +110,7 @@ void GCodeQueue::RingBuffer::commit_command(bool skip_ok
  * Return false for a full buffer, or if the 'command' is a comment.
  */
 bool GCodeQueue::RingBuffer::enqueue(const char *cmd, bool skip_ok/*=true*/
-  #if HAS_MULTI_SERIAL
-    , serial_index_t serial_ind/*=-1*/
-  #endif
+  OPTARG(HAS_MULTI_SERIAL, serial_index_t serial_ind/*=-1*/)
 ) {
   if (*cmd == ';' || length >= BUFSIZE) return false;
   strcpy(commands[index_w].buffer, cmd);
@@ -268,8 +276,8 @@ void GCodeQueue::flush_and_request_resend(const serial_index_t serial_ind) {
     PORT_REDIRECT(SERIAL_PORTMASK(serial_ind));   // Reply to the serial port that sent the command
   #endif
   SERIAL_FLUSH();
-  SERIAL_ECHOPGM(STR_RESEND);
-  SERIAL_ECHOLN(serial_state[serial_ind.index].last_N + 1);
+  SERIAL_ECHOLNPAIR(STR_RESEND, serial_state[serial_ind.index].last_N + 1);
+  SERIAL_ECHOLNPGM(STR_OK);
 }
 
 static bool serial_data_available(serial_index_t index) {
@@ -308,6 +316,47 @@ FORCE_INLINE bool is_M29(const char * const cmd) {  // matches "M29" & "M29 ", b
   const char * const m29 = strstr_P(cmd, PSTR("M29"));
   return m29 && !NUMERIC(m29[3]);
 }
+
+#if HAS_CUTTER
+
+// 107011 -20210913 
+//读取;注释后的字符串， 回车结束
+void get_gcode_comment()
+{
+   char* p;
+   unsigned char i, inc=0, buf[30]={0};
+  while(1){
+      const int16_t n = card.get();
+      const bool card_eof = card.eof();
+      
+      if( (card_eof) || (n=='\n'))
+      {
+        for(i=LASER_MIN_X; i<=LASER_MAX_Y; i++){
+          p = strstr((char*)&buf[0], laser_device.laser_cmp_info[i]);
+          if(p) {
+            p+=5;
+            while(*p==' ') p++;
+            laser_device.set_laser_range((laser_device_range)i, atof(p));// = atof(p+5);
+            break;
+            //SERIAL_ECHOLNPAIR(laser_device.laser_cmp_info[i], laser_device.get_laser_range((laser_device_range)i));
+          }else if((p = strstr((char*)&buf[0], "estimated_time"))!= nullptr) { // 读取gcode中的模型打印时间 107011 -20211116
+            p += strlen("estimated_time(s):");
+            while(*p==' ') p++;
+            laser_device.remain_time = atof(p)+59; // +59 解决转换为整型的分钟的小数点后被舍弃的问题
+            //SERIAL_ECHOLNPAIR("laser_device.remain_time=", laser_device.remain_time);
+            break;
+          }
+        }
+		//SERIAL_ECHO_MSG(buf); //107011
+        return;
+      }
+
+      buf[inc] = n;
+	  if(inc<29) inc++;
+
+  }
+}
+#endif // #if HAS_CUTTER
 
 #define PS_NORMAL 0
 #define PS_EOL    1
@@ -501,13 +550,9 @@ void GCodeQueue::get_serial_commands() {
           char* gpos = strchr(command, 'G');
           if (gpos) {
             switch (strtol(gpos + 1, nullptr, 10)) {
-              case 0: case 1:
-              #if ENABLED(ARC_SUPPORT)
-                case 2: case 3:
-              #endif
-              #if ENABLED(BEZIER_CURVE_SUPPORT)
-                case 5:
-              #endif
+              case 0 ... 1:
+              TERN_(ARC_SUPPORT, case 2 ... 3:)
+              TERN_(BEZIER_CURVE_SUPPORT, case 5:)
                 PORT_REDIRECT(SERIAL_PORTMASK(p));     // Reply to the serial port that sent the command
                 SERIAL_ECHOLNPGM(STR_ERR_STOPPED);
                 LCD_MESSAGEPGM(MSG_STOPPED);
@@ -551,13 +596,18 @@ void GCodeQueue::get_serial_commands() {
    * always receives complete command-lines, they can go directly
    * into the main command queue.
    */
+  // uint16_t SD_ReadTimeout = 0;
+  // bool SD_Card_status = true;
+  // bool sd_printing_autopause = false;
+  
   inline void GCodeQueue::get_sdcard_commands() {
     static uint8_t sd_input_state = PS_NORMAL;
 
-    if (!IS_SD_PRINTING()) return;
+    // Get commands if there are more in the file
+    if (!IS_SD_FETCHING()) return;
 
     int sd_count = 0;
-    while (!ring_buffer.full() && !card.eof()) {
+    while (!ring_buffer.full() && !card.eof() && rtscheck.RTS_SD_Detected()) {
       const int16_t n = card.get();
       const bool card_eof = card.eof();
       if (n < 0 && !card_eof) { SERIAL_ERROR_MSG(STR_SD_ERR_READ); continue; }
@@ -586,16 +636,79 @@ void GCodeQueue::get_serial_commands() {
 
           // Prime Power-Loss Recovery for the NEXT commit_command
           TERN_(POWER_LOSS_RECOVERY, recovery.cmd_sdpos = card.getIndex());
+          TERN_(CREALITY_POWER_LOSS, pre01_power_loss.cmd_sdpos = card.getIndex());
         }
 
         if (card.eof()) card.fileHasFinished();         // Handle end of file reached
       }
       else
+      {
         process_stream_char(sd_char, sd_input_state, command.buffer, sd_count);
+      }
+      #if ENABLED(RTS_AVAILABLE)
+        // the printing results
+        if (card_eof)
+        {
+          rtscheck.RTS_SndData(100, PRINT_PROCESS_VP);
+          delay(1);
+          rtscheck.RTS_SndData(100, PRINT_PROCESS_ICON_VP);
+          delay(1);
+
+          #if HAS_CUTTER
+            if(laser_device.is_laser_device()){ 
+              // rtscheck.RTS_SndData(ExchangePageBase + 60, ExchangepageAddr);
+              //  change_page_font = 60;
+            }else
+          #endif
+          {
+            rtscheck.RTS_SndData(ExchangePageBase + 9, ExchangepageAddr);
+             change_page_font = 9;
+          }
+
+          // if(flag_over_shutdown)
+          // {
+          //   // Start the automatic shutdown timer after printing
+          //   flag_counter_printover_to_shutdown = true;
+          // }
+        }
+      #endif
+        
     }
   }
 
 #endif // SDSUPPORT
+
+
+#if ENABLED(SDSUPPORT) && HAS_CUTTER
+
+  void get_sdcard_laser_range() 
+  {
+    // Get commands if there are more in the file
+    if( !((laser_device.is_read_gcode_range_on()) && (laser_device.is_laser_device()) && (IS_SD_PAUSED()))) return;
+
+    while (!card.eof()) 
+    {
+      const int16_t n = card.get();
+      const bool card_eof = card.eof();
+
+      if (n < 0 && !card_eof) { SERIAL_ERROR_MSG(STR_SD_ERR_READ); continue; }
+        
+      if(n==';'){
+        //SERIAL_ECHOLNPAIR("n=;", n);
+        get_gcode_comment(); //  读取;后的字符，直到回车/结束符
+      }else{
+          // 行首非‘;’的定为读取范围结束
+          //SERIAL_ECHOLNPAIR("n!=;", n);
+          card.setIndex(0);
+          laser_device.set_read_gcode_range_off();
+		  return;
+      }
+      
+    }
+  }
+
+#endif // SDSUPPORT
+
 
 /**
  * Add to the circular command queue the next command from:
@@ -607,8 +720,14 @@ void GCodeQueue::get_available_commands() {
   if (ring_buffer.full()) return;
 
   get_serial_commands();
-
-  TERN_(SDSUPPORT, get_sdcard_commands());
+  #if HAS_CUTTER
+    if(laser_device.is_laser_device()&&laser_device.is_read_gcode_range_on()&&IS_SD_PAUSED()){ // 解决FDM有时不打印的bug 107011 -20211110
+      get_sdcard_laser_range();
+    }else 
+  #endif
+  {
+    TERN_(SDSUPPORT, get_sdcard_commands());
+  }
 }
 
 /**

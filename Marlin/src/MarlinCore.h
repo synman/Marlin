@@ -56,24 +56,27 @@ void minkill(const bool steppers_off=false);
 
 // Global State of the firmware
 enum MarlinState : uint8_t {
-  MF_INITIALIZING =  0,
-  MF_RUNNING      = _BV(0),
-  MF_PAUSED       = _BV(1),
-  MF_WAITING      = _BV(2),
-  MF_STOPPED      = _BV(3),
-  MF_SD_COMPLETE  = _BV(4),
-  MF_KILLED       = _BV(7)
+  MF_INITIALIZING = 0,
+  MF_STOPPED,
+  MF_KILLED,
+  MF_RUNNING,
+  MF_SD_COMPLETE,
+  MF_PAUSED,
+  MF_WAITING,
 };
 
 extern MarlinState marlin_state;
-inline bool IsRunning() { return marlin_state == MF_RUNNING; }
-inline bool IsStopped() { return marlin_state != MF_RUNNING; }
+inline bool IsRunning() { return marlin_state >= MF_RUNNING; }
+inline bool IsStopped() { return marlin_state == MF_STOPPED; }
 
 bool printingIsActive();
+bool printJobOngoing();
 bool printingIsPaused();
 void startOrResumeJob();
 
 extern bool wait_for_heatup;
+extern uint8_t language_change_font;
+// extern uint8_t wifi_enable_flag;
 
 #if HAS_RESUME_CONTINUE
   extern bool wait_for_user;

@@ -27,8 +27,12 @@
  */
 
 #include "BL24CXX.h"
-#include <libmaple/gpio.h>
-
+#ifdef __STM32F1__
+  #include <libmaple/gpio.h>
+#else
+  #include "../HAL/shared/Delay.h"
+  #define delay_us(n) DELAY_US(n)
+#endif
 #ifndef EEPROM_WRITE_DELAY
   #define EEPROM_WRITE_DELAY    10
 #endif
@@ -37,9 +41,14 @@
 #endif
 
 // IO direction setting
-#define SDA_IN()  do{ PIN_MAP[IIC_EEPROM_SDA].gpio_device->regs->CRH &= 0XFFFF0FFF; PIN_MAP[IIC_EEPROM_SDA].gpio_device->regs->CRH |= 8 << 12; }while(0)
-#define SDA_OUT() do{ PIN_MAP[IIC_EEPROM_SDA].gpio_device->regs->CRH &= 0XFFFF0FFF; PIN_MAP[IIC_EEPROM_SDA].gpio_device->regs->CRH |= 3 << 12; }while(0)
-
+// IO direction setting
+#ifdef __STM32F1__
+  #define SDA_IN()  do{ PIN_MAP[IIC_EEPROM_SDA].gpio_device->regs->CRH &= 0XFFFF0FFF; PIN_MAP[IIC_EEPROM_SDA].gpio_device->regs->CRH |= 8 << 12; }while(0)
+  #define SDA_OUT() do{ PIN_MAP[IIC_EEPROM_SDA].gpio_device->regs->CRH &= 0XFFFF0FFF; PIN_MAP[IIC_EEPROM_SDA].gpio_device->regs->CRH |= 3 << 12; }while(0)
+#else
+  #define SDA_IN()  SET_INPUT(IIC_EEPROM_SDA)
+  #define SDA_OUT() SET_OUTPUT(IIC_EEPROM_SDA)
+#endif
 // IO ops
 #define IIC_SCL_0()   WRITE(IIC_EEPROM_SCL, LOW)
 #define IIC_SCL_1()   WRITE(IIC_EEPROM_SCL, HIGH)
@@ -200,12 +209,12 @@ void BL24CXX::writeOneByte(uint16_t WriteAddr, uint8_t DataToWrite) {
   else
     IIC::send_byte(EEPROM_DEVICE_ADDRESS + ((WriteAddr >> 8) << 1)); // Send device address 0xA0, write data
 
-  IIC::wait_ack();
-  IIC::send_byte(WriteAddr & 0xFF);               // Send low address
-  IIC::wait_ack();
-  IIC::send_byte(DataToWrite);                    // Receiving mode
-  IIC::wait_ack();
-  IIC::stop();                                    // Generate a stop condition
+    IIC::wait_ack();
+    IIC::send_byte(WriteAddr & 0xFF);               // Send low address
+    IIC::wait_ack();
+    IIC::send_byte(DataToWrite);                    // Receiving mode
+    IIC::wait_ack();
+    IIC::stop();                                    // Generate a stop condition
   delay(10);
 }
 
@@ -267,6 +276,6 @@ void BL24CXX::read(uint16_t ReadAddr, uint8_t *pBuffer, uint16_t NumToRead) {
 void BL24CXX::write(uint16_t WriteAddr, uint8_t *pBuffer, uint16_t NumToWrite) {
   for (; NumToWrite; NumToWrite--, WriteAddr++)
     writeOneByte(WriteAddr, *pBuffer++);
-}
+  }    
 
 #endif // IIC_BL24CXX_EEPROM

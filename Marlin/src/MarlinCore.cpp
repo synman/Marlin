@@ -68,9 +68,9 @@
 #endif
 
 #if HAS_TFT_LVGL_UI
-  #include "lcd/extui/lib/mks_ui/tft_lvgl_configuration.h"
-  #include "lcd/extui/lib/mks_ui/draw_ui.h"
-  #include "lcd/extui/lib/mks_ui/mks_hardware_test.h"
+  #include "lcd/extui/mks_ui/tft_lvgl_configuration.h"
+  #include "lcd/extui/mks_ui/draw_ui.h"
+  #include "lcd/extui/mks_ui/mks_hardware_test.h"
   #include <lvgl.h>
 #endif
 
@@ -78,6 +78,11 @@
   #include "lcd/dwin/e3v2/dwin.h"
   #include "lcd/dwin/e3v2/rotary_encoder.h"
 #endif
+
+#if ENABLED(RTS_AVAILABLE)
+  #include "lcd/dwin/lcd_rts.h"
+#endif
+
 
 #if ENABLED(EXTENSIBLE_UI)
   #include "lcd/extui/ui_api.h"
@@ -229,11 +234,15 @@
 #endif
 
 #if ENABLED(DGUS_LCD_UI_MKS)
-  #include "lcd/extui/lib/dgus/DGUSScreenHandler.h"
+  #include "lcd/extui/dgus/DGUSScreenHandler.h"
 #endif
 
 #if HAS_DRIVER_SAFE_POWER_PROTECT
   #include "feature/stepper_driver_safety.h"
+#endif
+
+#if ENABLED(CREALITY_POWER_LOSS)
+  #include "./feature/PRE01_Power_loss/PRE01_Power_loss.h"
 #endif
 
 PGMSTR(M112_KILL_STR, "M112 Shutdown");
@@ -242,6 +251,10 @@ MarlinState marlin_state = MF_INITIALIZING;
 
 // For M109 and M190, this flag may be cleared (by M108) to exit the wait loop
 bool wait_for_heatup = true;
+
+uint8_t language_change_font = 2;  //语言选择标志位
+
+bool eeprom_save_flag = false;
 
 // For M0/M1, this flag may be cleared (by M108) to exit the wait-for-user loop
 #if HAS_RESUME_CONTINUE
@@ -331,18 +344,14 @@ void disable_all_steppers() {
 }
 
 /**
- * A Print Job exists when the timer is running or SD printing
+ * A Print Job exists when the timer is running or SD is printing
  */
-bool printJobOngoing() {
-  return print_job_timer.isRunning() || IS_SD_PRINTING();
-}
+bool printJobOngoing() { return print_job_timer.isRunning() || IS_SD_PRINTING(); }
 
 /**
- * Printing is active when the print job timer is running
+ * Printing is active when a job is underway but not paused
  */
-bool printingIsActive() {
-  return !did_pause_print && (print_job_timer.isRunning() || IS_SD_PRINTING());
-}
+bool printingIsActive() { return !did_pause_print && printJobOngoing(); }
 
 /**
  * Printing is paused according to SD or host indicators
@@ -367,7 +376,7 @@ void startOrResumeJob() {
 
   inline void abortSDPrinting() {
     IF_DISABLED(NO_SD_AUTOSTART, card.autofile_cancel());
-    card.endFilePrint(TERN_(SD_RESORT, true));
+    card.abortFilePrintNow(TERN_(SD_RESORT, true));
 
     queue.clear();
     quickstop_stepper();
@@ -381,22 +390,49 @@ void startOrResumeJob() {
     wait_for_heatup = false;
 
     TERN_(POWER_LOSS_RECOVERY, recovery.purge());
+    TERN_(CREALITY_POWER_LOSS, pre01_power_loss.purge());  //  停止打印时，清空断电续打保存的信息
 
     #ifdef EVENT_GCODE_SD_ABORT
-      queue.inject_P(PSTR(EVENT_GCODE_SD_ABORT));
+      // queue.inject_P(PSTR(EVENT_GCODE_SD_ABORT));
+      gcode.process_subcommands_now_P(PSTR(EVENT_GCODE_SD_ABORT));
+      rtscheck.RTS_SndData(0, MOTOR_FREE_ICON_VP);
     #endif
 
     TERN_(PASSWORD_AFTER_SD_PRINT_ABORT, password.lock_machine());
+    
   }
-
-  inline void finishSDPrinting() {
-    if (queue.enqueue_one_P(PSTR("M1001"))) {
-      marlin_state = MF_RUNNING;
+  
+  inline void finishSDPrinting() 
+  {
+    if (queue.enqueue_one_P(PSTR("M1001"))) { // Keep trying until it gets queued
+      marlin_state = MF_RUNNING;              // Signal to stop trying
       TERN_(PASSWORD_AFTER_SD_PRINT_END, password.lock_machine());
       TERN_(DGUS_LCD_UI_MKS, ScreenHandler.SDPrintingFinished());
     }
   }
+  #if HAS_CUTTER
+    inline void abortSDEngraving() {
+      IF_DISABLED(NO_SD_AUTOSTART, card.autofile_cancel());
+      card.abortFilePrintNow(TERN_(SD_RESORT, true));
 
+      queue.clear();
+      quickstop_stepper();
+
+      print_job_timer.abort();
+      laser_device.quick_stop();
+
+      wait_for_heatup = false;
+
+      TERN_(POWER_LOSS_RECOVERY, recovery.purge());
+      TERN_(CREALITY_POWER_LOSS, pre01_power_loss.purge());  //  停止打印时，清空断电续打保存的信息
+
+      #ifdef EVENT_GCODE_SD_ABORT_LASER
+        gcode.process_subcommands_now_P(PSTR(EVENT_GCODE_SD_ABORT_LASER));
+      #endif
+
+      TERN_(PASSWORD_AFTER_SD_PRINT_ABORT, password.lock_machine());
+    }
+  #endif
 #endif // SDSUPPORT
 
 /**
@@ -428,7 +464,15 @@ inline void manage_inactivity(const bool ignore_stepper_queue=false) {
 
   if (gcode.stepper_max_timed_out(ms)) {
     SERIAL_ERROR_MSG(STR_KILL_INACTIVE_TIME, parser.command_ptr);
-    kill();
+    #ifdef RTS_AVAILABLE
+      waitway = 0;
+      rtscheck.RTS_SndData(ExchangePageBase + 41, ExchangepageAddr);
+      change_page_font = 41;
+      rtscheck.RTS_SndData(Error_201, ABNORMAL_PAGE_TEXT_VP);
+      errorway = 1;
+    #else
+      kill();
+    #endif
   }
 
   // M18 / M84 : Handle steppers inactive time timeout
@@ -485,6 +529,10 @@ inline void manage_inactivity(const bool ignore_stepper_queue=false) {
       SERIAL_ERROR_MSG(STR_KILL_BUTTON);
       kill();
     }
+  #endif
+
+  #if HAS_FREEZE_PIN
+    Stepper::frozen = !READ(FREEZE_PIN);
   #endif
 
   #if HAS_HOME
@@ -724,9 +772,21 @@ void idle(TERN_(ADVANCED_PAUSE_FEATURE, bool no_stepper_sleep/*=false*/)) {
 
   // Core Marlin activities
   manage_inactivity(TERN_(ADVANCED_PAUSE_FEATURE, no_stepper_sleep));
-
+  
   // Manage Heaters (and Watchdog)
   thermalManager.manage_heater();
+
+  #if ENABLED(CREALITY_POWER_LOSS)
+    //实时获取当前的电压变化，电压低于23v时，则开始保存数据
+    #if HAS_CUTTER
+      if(laser_device.is_laser_device())
+      {
+      }else
+    #endif
+    {
+      pre01_power_loss.check_current_voltage();
+    }
+  #endif
 
   // Max7219 heartbeat, animation, etc
   TERN_(MAX7219_DEBUG, max7219.idle_tasks());
@@ -737,9 +797,15 @@ void idle(TERN_(ADVANCED_PAUSE_FEATURE, bool no_stepper_sleep/*=false*/)) {
   // TODO: Still causing errors
   (void)check_tool_sensor_stats(active_extruder, true);
 
-  // Handle filament runout sensors
-  TERN_(HAS_FILAMENT_SENSOR, runout.run());
-
+  #if HAS_CUTTER
+    if(laser_device.is_laser_device())
+    {
+    }else
+  #endif
+  {
+    // Handle filament runout sensors
+    TERN_(HAS_FILAMENT_SENSOR, runout.run());
+  }
   // Run HAL idle tasks
   TERN_(HAL_IDLETASK, HAL_idletask());
 
@@ -748,7 +814,14 @@ void idle(TERN_(ADVANCED_PAUSE_FEATURE, bool no_stepper_sleep/*=false*/)) {
 
   // Handle Power-Loss Recovery
   #if ENABLED(POWER_LOSS_RECOVERY) && PIN_EXISTS(POWER_LOSS)
-    if (printJobOngoing()) recovery.outage();
+      #if HAS_CUTTER
+        if(laser_device.is_laser_device())
+        {
+        }else
+    #endif
+    {
+      if (IS_SD_PRINTING()) recovery.outage();
+    }
   #endif
 
   // Run StallGuard endstop checks
@@ -776,6 +849,90 @@ void idle(TERN_(ADVANCED_PAUSE_FEATURE, bool no_stepper_sleep/*=false*/)) {
 
   // Handle UI input / draw events
   TERN(DWIN_CREALITY_LCD, DWIN_Update(), ui.update());
+  #if HAS_CUTTER
+    if(laser_device.is_laser_device())
+    {
+      TERN(RTS_AVAILABLE, RTSUpdateLaser(),ui.update());
+    }else
+  #endif
+  {
+    TERN(RTS_AVAILABLE, RTSUpdate(),ui.update());
+  }
+
+  // #if ENABLED(FIX_MOUNTED_PROBE)
+  //   if(0 == READ(OPTO_SWITCH_PIN))
+  //   {
+  //     if(home_flag)
+  //     {
+  //       endstops.enable_z_probe(true);
+  //       if(home_count)
+  //       {
+  //         home_count = false;
+  //         WRITE(COM_PIN, LOW);
+  //         delay(200);
+  //         WRITE(COM_PIN, HIGH);
+  //       }
+  //     }
+  //     else if(G29_flag)
+  //     {
+  //       endstops.enable_z_probe(true);
+  //       digitalWrite(COM_PIN, HIGH);
+  //       delay(200);
+  //       digitalWrite(COM_PIN, LOW);
+  //       delay(200);
+  //     }
+  //     else
+  //     {
+  //       endstops.enable_z_probe(false);
+  //     }
+  //   }
+  //   else
+  //   {
+  //     endstops.enable_z_probe(false);
+  //   }
+  // #endif
+
+  #if HAS_CUTTER
+    if(laser_device.is_laser_device())
+    {
+      TERN(RTS_AVAILABLE, RTSUpdateLaser(),ui.update());
+    }else
+  #endif
+  {
+    TERN(RTS_AVAILABLE, RTSUpdate(),ui.update());
+  }
+  // #if ENABLED(FIX_MOUNTED_PROBE)
+  //   if(0 == READ(OPTO_SWITCH_PIN))
+  //   {
+  //     if(home_flag)
+  //     {
+  //       endstops.enable_z_probe(true);
+  //       if(home_count)
+  //       {
+  //         home_count = false;
+  //         WRITE(COM_PIN, LOW);
+  //         delay(200);
+  //         WRITE(COM_PIN, HIGH);
+  //       }
+  //     }
+  //     else if(G29_flag)
+  //     {
+  //       endstops.enable_z_probe(true);
+  //       digitalWrite(COM_PIN, HIGH);
+  //       delay(200);
+  //       digitalWrite(COM_PIN, LOW);
+  //       delay(200);
+  //     }
+  //     else
+  //     {
+  //       endstops.enable_z_probe(false);
+  //     }
+  //   }
+  //   else
+  //   {
+  //     endstops.enable_z_probe(false);
+  //   }
+  // #endif
 
   // Run i2c Position Encoders
   #if ENABLED(I2C_POSITION_ENCODERS)
@@ -796,6 +953,7 @@ void idle(TERN_(ADVANCED_PAUSE_FEATURE, bool no_stepper_sleep/*=false*/)) {
     if (!gcode.autoreport_paused) {
       TERN_(AUTO_REPORT_TEMPERATURES, thermalManager.auto_reporter.tick());
       TERN_(AUTO_REPORT_SD_STATUS, card.auto_reporter.tick());
+      TERN_(AUTO_REPORT_POSITION, position_auto_reporter.tick());
     }
   #endif
 
@@ -808,6 +966,25 @@ void idle(TERN_(ADVANCED_PAUSE_FEATURE, bool no_stepper_sleep/*=false*/)) {
   // Direct Stepping
   TERN_(DIRECT_STEPPING, page_manager.write_responses());
 
+  #if ENABLED(HAS_MENU_RESET_WIFI)
+    static uint64 wifi_recordms = 0;
+
+    if(WIFI_STATE == PRESSED)
+    {
+      wifi_recordms = millis();
+      wifi_recordms += 7000;
+      WIFI_STATE = RECORDTIME;
+    }
+    if(WIFI_STATE == RECORDTIME)
+    {
+      if(wifi_recordms == millis())
+      {
+        OUT_WRITE(RESET_WIFI_PIN, HIGH);
+        WIFI_STATE = INITIAL;
+        SERIAL_ECHOPGM("wifi has reseted");
+      }
+    }
+  #endif
   // Update the LVGL interface
   TERN_(HAS_TFT_LVGL_UI, LV_TASK_HANDLER());
 
@@ -825,18 +1002,19 @@ void kill(PGM_P const lcd_error/*=nullptr*/, PGM_P const lcd_component/*=nullptr
 
   TERN_(HAS_CUTTER, cutter.kill()); // Full cutter shutdown including ISR control
 
-  SERIAL_ERROR_MSG(STR_ERR_KILLED);
+  // Echo the LCD message to serial for extra context
+  if (lcd_error) { SERIAL_ECHO_START(); SERIAL_ECHOLNPGM_P(lcd_error); }
 
   #if HAS_DISPLAY
     ui.kill_screen(lcd_error ?: GET_TEXT(MSG_KILLED), lcd_component ?: NUL_STR);
   #else
-    UNUSED(lcd_error);
-    UNUSED(lcd_component);
+    UNUSED(lcd_error); UNUSED(lcd_component);
   #endif
 
-  #if HAS_TFT_LVGL_UI
-    lv_draw_error_message(lcd_error);
-  #endif
+  TERN_(HAS_TFT_LVGL_UI, lv_draw_error_message(lcd_error));
+
+  // "Error:Printer halted. kill() called!"
+  SERIAL_ERROR_MSG(STR_ERR_KILLED);
 
   #ifdef ACTION_ON_KILL
     host_action_kill();
@@ -900,7 +1078,7 @@ void stop() {
     thermalManager.set_fans_paused(false); // Un-pause fans for safety
   #endif
 
-  if (IsRunning()) {
+  if (!IsStopped()) {
     SERIAL_ERROR_MSG(STR_ERR_STOPPED);
     LCD_MESSAGEPGM(MSG_STOPPED);
     safe_delay(350);       // allow enough time for messages to get out before stopping
@@ -1071,9 +1249,20 @@ void setup() {
   while (!MYSERIAL1.connected() && PENDING(millis(), serial_connect_timeout)) { /*nada*/ }
 
   #if HAS_MULTI_SERIAL && !HAS_ETHERNET
-    MYSERIAL2.begin(BAUDRATE);
+    #ifndef BAUDRATE_2
+      #define BAUDRATE_2 BAUDRATE
+    #endif
+    MYSERIAL2.begin(BAUDRATE_2);
     serial_connect_timeout = millis() + 1000UL;
     while (!MYSERIAL2.connected() && PENDING(millis(), serial_connect_timeout)) { /*nada*/ }
+    #ifdef SERIAL_PORT_3
+      #ifndef BAUDRATE_3
+        #define BAUDRATE_3 BAUDRATE
+      #endif
+      MYSERIAL3.begin(BAUDRATE_3);
+      serial_connect_timeout = millis() + 1000UL;
+      while (!MYSERIAL3.connected() && PENDING(millis(), serial_connect_timeout)) { /*nada*/ }
+    #endif
   #endif
   SERIAL_ECHOLNPGM("start");
 
@@ -1085,6 +1274,10 @@ void setup() {
     #else
       SET_INPUT_PULLUP(KILL_PIN);
     #endif
+  #endif
+
+  #if HAS_FREEZE_PIN
+    SET_INPUT_PULLUP(FREEZE_PIN);
   #endif
 
   #if HAS_SUICIDE
@@ -1130,6 +1323,16 @@ void setup() {
     SETUP_RUN(runout.setup());
   #endif
 
+
+  #if ENABLED(HAS_MENU_RESET_WIFI)
+    SET_OUTPUT(RESET_WIFI_PIN);
+    OUT_WRITE(RESET_WIFI_PIN, HIGH);
+  #endif
+
+  // Motor transfer circuit board for 4PIN, Z E axis driver chip is A4988, X Y axis driver chip is TMC2208
+  // SET_OUTPUT(MOTOR_CIRCUIT_PIN);
+  // OUT_WRITE(MOTOR_CIRCUIT_PIN, HIGH);
+
   #if HAS_TMC220x
     SETUP_RUN(tmc_serial_begin());
   #endif
@@ -1143,6 +1346,13 @@ void setup() {
   #if ENABLED(POWER_LOSS_RECOVERY)
     SETUP_RUN(recovery.setup());
   #endif
+
+  #if ENABLED(HAS_MENU_RESET_WIFI)
+    SET_OUTPUT(RESET_WIFI_PIN);
+    OUT_WRITE(RESET_WIFI_PIN, HIGH);
+  #endif
+
+  // SET_OUTPUT(MOTOR_PROTECT_PIN);
 
   #if HAS_L64XX
     SETUP_RUN(L64xxManager.init());  // Set up SPI, init drivers
@@ -1218,6 +1428,10 @@ void setup() {
     if (DWIN_Handshake()) SERIAL_ECHOLNPGM("ok."); else SERIAL_ECHOLNPGM("error.");
     DWIN_Frame_SetDir(1); // Orientation 90°
     DWIN_UpdateLCD();     // Show bootscreen (first image)
+  #elif ENABLED(RTS_AVAILABLE)
+    #ifdef LCD_SERIAL_PORT
+      LCD_SERIAL.begin(LCD_BAUDRATE);
+    #endif
   #else
     SETUP_RUN(ui.init());
     #if BOTH(HAS_WIRED_LCD, SHOW_BOOTSCREEN)
@@ -1247,6 +1461,11 @@ void setup() {
   SETUP_RUN(settings.first_load());   // Load data from EEPROM if available (or use defaults)
                                       // This also updates variables in the planner, elsewhere
 
+  #if ENABLED(RTS_AVAILABLE)
+    // TERN_(HAS_M414_COMMAND, lang = language_change_font);
+    lang = language_change_font;
+  #endif
+
   #if HAS_ETHERNET
     SETUP_RUN(ethernet.init());
   #endif
@@ -1260,6 +1479,10 @@ void setup() {
   sync_plan_position();               // Vital to init stepper/planner equivalent for current_position
 
   SETUP_RUN(thermalManager.init());   // Initialize temperature loop
+
+#if ENABLED(CREALITY_POWER_LOSS)
+  SETUP_RUN(pre01_power_loss.init());   // Initialize vlotage loop
+#endif
 
   SETUP_RUN(print_job_timer.init());  // Initial setup of print job timer
 
@@ -1280,7 +1503,8 @@ void setup() {
   #endif
 
   #if HAS_CUTTER
-    SETUP_RUN(cutter.init());
+    //SETUP_RUN(cutter.init());
+    SETUP_RUN(laser_device.soft_pwm_init()); // 107011
   #endif
 
   #if ENABLED(COOLANT_MIST)
@@ -1292,6 +1516,10 @@ void setup() {
 
   #if HAS_BED_PROBE
     SETUP_RUN(endstops.enable_z_probe(false));
+  #endif
+
+  #if ENABLED(HAS_CHECKFILAMENT)
+    SET_INPUT(CHECKFILAMENT_PIN);//设为浮空输入，不要上下拉
   #endif
 
   #if HAS_STEPPER_RESET
@@ -1477,7 +1705,7 @@ void setup() {
   #endif
 
   #if HAS_TRINAMIC_CONFIG && DISABLED(PSU_DEFAULT_OFF)
-    SETUP_RUN(test_tmc_connection(true, true, true, true));
+    SETUP_RUN(test_tmc_connection());
   #endif
 
   #if HAS_DRIVER_SAFE_POWER_PROTECT
@@ -1492,14 +1720,65 @@ void setup() {
     BL24CXX::init();
     const uint8_t err = BL24CXX::check();
     SERIAL_ECHO_TERNARY(err, "BL24CXX Check ", "failed", "succeeded", "!\n");
+    #if HAS_CUTTER
+      laser_device.get_device_form_eeprom(); // 107011
+      laser_device.get_z_axis_high_form_eeprom();
+     // laser_device.set_current_device(DEVICE_UNKNOWN);
+    #endif
+    
+  #endif
+  
+  //激光模式时 打开激光 107011 -20211013
+  #if HAS_CUTTER
+    if(laser_device.is_laser_device()) laser_device.laser_power_open();
+  #endif
+  #if ENABLED(CREALITY_POWER_LOSS)
+    // delay(500);
+    //SD卡插入，则检测是否异常断电
+    // if(IS_SD_INSERTED())
+    // {
+      // pre01_power_loss.check();
+      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_head: ", pre01_power_loss.info.valid_head);
+      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_foot: ", pre01_power_loss.info.valid_foot);
+      // SERIAL_ECHOLNPAIR("\r\ninfo.recovery_flag: ", pre01_power_loss.info.recovery_flag);
+    // }
+    // else
+    // {
+    //   SERIAL_ECHOLNPAIR("\r\n SD card is not inserted");
+    // }
+  #endif
+
+  #if ENABLED(CREALITY_POWER_LOSS)
+    // delay(500);
+    //SD卡插入，则检测是否异常断电
+    // if(IS_SD_INSERTED())
+    // {
+      // pre01_power_loss.check();
+      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_head: ", pre01_power_loss.info.valid_head);
+      // SERIAL_ECHOLNPAIR("\r\ninfo.valid_foot: ", pre01_power_loss.info.valid_foot);
+      // SERIAL_ECHOLNPAIR("\r\ninfo.recovery_flag: ", pre01_power_loss.info.recovery_flag);
+    // }
+    // else
+    // {
+    //   SERIAL_ECHOLNPAIR("\r\n SD card is not inserted");
+    // }
   #endif
 
   #if ENABLED(DWIN_CREALITY_LCD)
     Encoder_Configuration();
     HMI_Init();
-    DWIN_JPG_CacheTo1(Language_English);
+    HMI_SetLanguage();            //change default language display,to user set language
+    // DWIN_JPG_CacheTo1(Language_Chinese);
     HMI_StartFrame(true);
-    DWIN_StatusChanged(GET_TEXT(WELCOME_MSG));
+    // DWIN_StatusChanged(GET_TEXT(WELCOME_MSG));
+  #elif ENABLED(RTS_AVAILABLE)
+        delay(500);
+        SETUP_RUN(rtscheck.RTS_Init());
+    #if ENABLED(FIX_MOUNTED_PROBE)
+      OUT_WRITE(COM_PIN, HIGH);
+      SET_INPUT(OPTO_SWITCH_PIN);
+      OUT_WRITE(LED_CONTROL_PIN, LOW);
+    #endif
   #endif
 
   #if HAS_SERVICE_INTERVALS && DISABLED(DWIN_CREALITY_LCD)
@@ -1555,12 +1834,23 @@ void setup() {
  *    card, host, or by direct injection. The queue will continue to fill
  *    as long as idle() or manage_inactivity() are being called.
  */
+// extern bool SD_Card_status;
+// extern bool sd_printing_autopause;
 void loop() {
   do {
     idle();
 
     #if ENABLED(SDSUPPORT)
-      if (card.flag.abort_sd_printing) abortSDPrinting();
+      #if HAS_CUTTER
+        if(laser_device.is_laser_device())
+        {
+          if (card.flag.abort_sd_printing) abortSDEngraving();
+        }else
+      #endif
+      {
+        if (card.flag.abort_sd_printing) abortSDPrinting();
+      }
+
       if (marlin_state == MF_SD_COMPLETE) finishSDPrinting();
     #endif
 
@@ -1569,6 +1859,7 @@ void loop() {
     endstops.event_handler();
 
     TERN_(HAS_TFT_LVGL_UI, printer_state_polling());
+    
 
   } while (ENABLED(__AVR__)); // Loop forever on slower (AVR) boards
 }

@@ -107,6 +107,11 @@ enum BlockFlagBit : char {
   #if ENABLED(LASER_SYNCHRONOUS_M106_M107)
     , BLOCK_BIT_SYNC_FANS
   #endif
+
+    // Sync laser power from a queued block
+  #if ENABLED(LASER_POWER_SYNC)
+    , BLOCK_BIT_LASER_PWR
+  #endif
 };
 
 enum BlockFlag : char {
@@ -120,16 +125,19 @@ enum BlockFlag : char {
   #if ENABLED(LASER_SYNCHRONOUS_M106_M107)
     , BLOCK_FLAG_SYNC_FANS          = _BV(BLOCK_BIT_SYNC_FANS)
   #endif
+  #if ENABLED(LASER_POWER_SYNC)
+    , BLOCK_FLAG_LASER_PWR          = _BV(BLOCK_BIT_LASER_PWR)
+  #endif  
 };
 
-#define BLOCK_MASK_SYNC ( BLOCK_FLAG_SYNC_POSITION | TERN0(LASER_SYNCHRONOUS_M106_M107, BLOCK_FLAG_SYNC_FANS) )
+#define BLOCK_MASK_SYNC ( BLOCK_FLAG_SYNC_POSITION | TERN0(LASER_SYNCHRONOUS_M106_M107, BLOCK_FLAG_SYNC_FANS) | TERN0(LASER_POWER_SYNC, BLOCK_FLAG_LASER_PWR ))
 
-#if ENABLED(LASER_POWER_INLINE)
+#if ENABLED(LASER_FEATURE)
 
   typedef struct {
-    bool isPlanned:1;
-    bool isEnabled:1;
+    bool isEnabled:1;         // Set to engage the inline laser power output.
     bool dir:1;
+    bool isPowered:1;         // Set on any parsed G1, G2, G3, or G5 powered move, cleared on G0 and G28.
     bool Reserved:6;
   } power_status_t;
 
@@ -236,9 +244,11 @@ typedef struct block_t {
 
   #if ENABLED(POWER_LOSS_RECOVERY)
     uint32_t sdpos;
+  #elif ENABLED(CREALITY_POWER_LOSS)
+    uint32_t sdpos;
   #endif
 
-  #if ENABLED(LASER_POWER_INLINE)
+  #if ENABLED(LASER_FEATURE)
     block_laser_t laser;
   #endif
 
@@ -250,7 +260,7 @@ typedef struct block_t {
 
 #define BLOCK_MOD(n) ((n)&(BLOCK_BUFFER_SIZE-1))
 
-#if ENABLED(LASER_POWER_INLINE)
+#if ENABLED(LASER_FEATURE)
   typedef struct {
     /**
      * Laser status flags
@@ -268,10 +278,10 @@ typedef struct block_t {
 #endif
 
 typedef struct {
-   uint32_t max_acceleration_mm_per_s2[XYZE_N], // (mm/s^2) M201 XYZE
+   uint32_t max_acceleration_mm_per_s2[DISTINCT_AXES], // (mm/s^2) M201 XYZE
             min_segment_time_us;                // (µs) M205 B
-      float axis_steps_per_mm[XYZE_N];          // (steps) M92 XYZE - Steps per millimeter
- feedRate_t max_feedrate_mm_s[XYZE_N];          // (mm/s) M203 XYZE - Max speeds
+      float axis_steps_per_mm[DISTINCT_AXES];   // (steps) M92 XYZE - Steps per millimeter
+ feedRate_t max_feedrate_mm_s[DISTINCT_AXES];   // (mm/s) M203 XYZE - Max speeds
       float acceleration,                       // (mm/s^2) M204 S - Normal acceleration. DEFAULT ACCELERATION for all printing moves.
             retract_acceleration,               // (mm/s^2) M204 R - Retract acceleration. Filament pull-back and push-forward while standing still in the other axes
             travel_acceleration;                // (mm/s^2) M204 T - Travel acceleration. DEFAULT ACCELERATION for all NON printing moves.
@@ -337,7 +347,7 @@ class Planner {
       static xyze_bool_t last_page_dir;             // Last page direction given
     #endif
 
-    #if EXTRUDERS
+    #if HAS_EXTRUDERS
       static int16_t flow_percentage[EXTRUDERS];    // Extrusion factor for each extruder
       static float e_factor[EXTRUDERS];             // The flow percentage and volumetric multiplier combine to scale E movement
     #endif
@@ -356,17 +366,17 @@ class Planner {
 
     static planner_settings_t settings;
 
-    #if ENABLED(LASER_POWER_INLINE)
+    #if ENABLED(LASER_FEATURE)
       static laser_state_t laser_inline;
     #endif
 
-    static uint32_t max_acceleration_steps_per_s2[XYZE_N]; // (steps/s^2) Derived from mm_per_s2
-    static float steps_to_mm[XYZE_N];           // Millimeters per step
+    static uint32_t max_acceleration_steps_per_s2[DISTINCT_AXES]; // (steps/s^2) Derived from mm_per_s2
+    static float steps_to_mm[DISTINCT_AXES];          // Millimeters per step
 
     #if HAS_JUNCTION_DEVIATION
-      static float junction_deviation_mm;       // (mm) M205 J
+      static float junction_deviation_mm;             // (mm) M205 J
       #if HAS_LINEAR_E_JERK
-        static float max_e_jerk[DISTINCT_E];    // Calculated from junction_deviation_mm
+        static float max_e_jerk[DISTINCT_E];          // Calculated from junction_deviation_mm
       #endif
     #endif
 
@@ -491,10 +501,10 @@ class Planner {
     #if HAS_CLASSIC_JERK
       static void set_max_jerk(const AxisEnum axis, float inMaxJerkMMS);
     #else
-      static inline void set_max_jerk(const AxisEnum, const_float_t ) {}
+      static inline void set_max_jerk(const AxisEnum, const_float_t) {}
     #endif
 
-    #if EXTRUDERS
+    #if HAS_EXTRUDERS
       FORCE_INLINE static void refresh_e_factor(const uint8_t e) {
         e_factor[e] = flow_percentage[e] * 0.01f * TERN(NO_VOLUMETRICS, 1.0f, volumetric_multiplier[e]);
       }
@@ -592,9 +602,9 @@ class Planner {
 
     #else
 
-      FORCE_INLINE static float fade_scaling_factor_for_z(const_float_t ) { return 1; }
+      FORCE_INLINE static float fade_scaling_factor_for_z(const_float_t) { return 1; }
 
-      FORCE_INLINE static bool leveling_active_at_z(const_float_t ) { return true; }
+      FORCE_INLINE static bool leveling_active_at_z(const_float_t) { return true; }
 
     #endif
 
@@ -707,12 +717,8 @@ class Planner {
      * Returns true if movement was buffered, false otherwise
      */
     static bool _buffer_steps(const xyze_long_t &target
-      #if HAS_POSITION_FLOAT
-        , const xyze_pos_t &target_float
-      #endif
-      #if HAS_DIST_MM_ARG
-        , const xyze_float_t &cart_dist_mm
-      #endif
+      OPTARG(HAS_POSITION_FLOAT, const xyze_pos_t &target_float)
+      OPTARG(HAS_DIST_MM_ARG, const xyze_float_t &cart_dist_mm)
       , feedRate_t fr_mm_s, const uint8_t extruder, const_float_t millimeters=0.0
     );
 
@@ -728,14 +734,9 @@ class Planner {
      *
      * Returns true is movement is acceptable, false otherwise
      */
-    static bool _populate_block(block_t * const block, bool split_move,
-        const xyze_long_t &target
-      #if HAS_POSITION_FLOAT
-        , const xyze_pos_t &target_float
-      #endif
-      #if HAS_DIST_MM_ARG
-        , const xyze_float_t &cart_dist_mm
-      #endif
+    static bool _populate_block(block_t * const block, bool split_move, const xyze_long_t &target
+      OPTARG(HAS_POSITION_FLOAT, const xyze_pos_t &target_float)
+      OPTARG(HAS_DIST_MM_ARG, const xyze_float_t &cart_dist_mm)
       , feedRate_t fr_mm_s, const uint8_t extruder, const_float_t millimeters=0.0
     );
 
@@ -744,9 +745,8 @@ class Planner {
      * Add a block to the buffer that just updates the position or in
      * case of LASER_SYNCHRONOUS_M106_M107 the fan pwm
      */
-    static void buffer_sync_block(
-      TERN_(LASER_SYNCHRONOUS_M106_M107, uint8_t sync_flag=BLOCK_FLAG_SYNC_POSITION)
-    );
+    static void buffer_sync_block();
+    static void buffer_sync_block(uint8_t sync_flag);
 
   #if IS_KINEMATIC
     private:
@@ -768,22 +768,16 @@ class Planner {
      *  millimeters - the length of the movement, if known
      */
     static bool buffer_segment(const_float_t a, const_float_t b, const_float_t c, const_float_t e
-      #if HAS_DIST_MM_ARG
-        , const xyze_float_t &cart_dist_mm
-      #endif
+      OPTARG(HAS_DIST_MM_ARG, const xyze_float_t &cart_dist_mm)
       , const_feedRate_t fr_mm_s, const uint8_t extruder, const_float_t millimeters=0.0
     );
 
     FORCE_INLINE static bool buffer_segment(abce_pos_t &abce
-      #if HAS_DIST_MM_ARG
-        , const xyze_float_t &cart_dist_mm
-      #endif
+      OPTARG(HAS_DIST_MM_ARG, const xyze_float_t &cart_dist_mm)
       , const_feedRate_t fr_mm_s, const uint8_t extruder, const_float_t millimeters=0.0
     ) {
       return buffer_segment(abce.a, abce.b, abce.c, abce.e
-        #if HAS_DIST_MM_ARG
-          , cart_dist_mm
-        #endif
+        OPTARG(HAS_DIST_MM_ARG, cart_dist_mm)
         , fr_mm_s, extruder, millimeters);
     }
 
@@ -801,20 +795,14 @@ class Planner {
      *  inv_duration - the reciprocal if the duration of the movement, if known (kinematic only if feeedrate scaling is enabled)
      */
     static bool buffer_line(const_float_t rx, const_float_t ry, const_float_t rz, const_float_t e, const_feedRate_t fr_mm_s, const uint8_t extruder, const float millimeters=0.0
-      #if ENABLED(SCARA_FEEDRATE_SCALING)
-        , const_float_t inv_duration=0.0
-      #endif
+      OPTARG(SCARA_FEEDRATE_SCALING, const_float_t inv_duration=0.0)
     );
 
     FORCE_INLINE static bool buffer_line(const xyze_pos_t &cart, const_feedRate_t fr_mm_s, const uint8_t extruder, const float millimeters=0.0
-      #if ENABLED(SCARA_FEEDRATE_SCALING)
-        , const_float_t inv_duration=0.0
-      #endif
+      OPTARG(SCARA_FEEDRATE_SCALING, const_float_t inv_duration=0.0)
     ) {
       return buffer_line(cart.x, cart.y, cart.z, cart.e, fr_mm_s, extruder, millimeters
-        #if ENABLED(SCARA_FEEDRATE_SCALING)
-          , inv_duration
-        #endif
+        OPTARG(SCARA_FEEDRATE_SCALING, inv_duration)
       );
     }
 
@@ -1014,13 +1002,13 @@ class Planner {
 
       FORCE_INLINE static void normalize_junction_vector(xyze_float_t &vector) {
         float magnitude_sq = 0;
-        LOOP_XYZE(idx) if (vector[idx]) magnitude_sq += sq(vector[idx]);
+        LOOP_LOGICAL_AXES(idx) if (vector[idx]) magnitude_sq += sq(vector[idx]);
         vector *= RSQRT(magnitude_sq);
       }
 
       FORCE_INLINE static float limit_value_by_axis_maximum(const_float_t max_value, xyze_float_t &unit_vec) {
         float limit_value = max_value;
-        LOOP_XYZE(idx) {
+        LOOP_LOGICAL_AXES(idx) {
           if (unit_vec[idx]) {
             if (limit_value * ABS(unit_vec[idx]) > settings.max_acceleration_mm_per_s2[idx])
               limit_value = ABS(settings.max_acceleration_mm_per_s2[idx] / unit_vec[idx]);

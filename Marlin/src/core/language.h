@@ -80,6 +80,7 @@
   #define SOURCE_CODE_URL DEFAULT_SOURCE_CODE_URL
 #endif
 
+
 #ifdef CUSTOM_MACHINE_NAME
   #undef  MACHINE_NAME
   #define MACHINE_NAME CUSTOM_MACHINE_NAME
@@ -92,7 +93,7 @@
   #define MACHINE_UUID DEFAULT_MACHINE_UUID
 #endif
 
-#define MARLIN_WEBSITE_URL "marlinfw.org"
+#define MARLIN_WEBSITE_URL "www.creality.com"
 
 //#if !defined(STRING_SPLASH_LINE3) && defined(WEBSITE_URL)
 //  #define STRING_SPLASH_LINE3 WEBSITE_URL
@@ -126,6 +127,26 @@
 #define STR_INVALID_E_STEPPER               "Invalid E stepper"
 #define STR_E_STEPPER_NOT_SPECIFIED         "E stepper not specified"
 #define STR_INVALID_SOLENOID                "Invalid solenoid"
+#define STR_M115_DISABLE_REPORT             "FIRMWARE_NAME:"        FIRMWARE_VERSION     \
+                                            " SOURCE_CODE_URL:"     SOURCE_CODE_URL      \
+                                            " HARDWARE_VERSION:"    HARDWARE_VERSION     \
+                                            " SCREEN_VERSION:"      SCREEN_VERSION       \
+                                            " SCREEN_HW_VERSION:"   SCREEN_HW_VERSION    \
+                                            " PROTOCOL_VERSION:"    PROTOCOL_VERSION     \
+                                            " MACHINE_TYPE:"        MACHINE_NAME         \
+                                            " EXTRUDER_COUNT:"      STRINGIFY(EXTRUDERS) \
+                                            " UUID:"                MACHINE_UUID         \
+                                            " Cap:WIFI:"            STRINGIFY(0)
+#define STR_M115_ENABLE_REPORT              "FIRMWARE_NAME:"        FIRMWARE_VERSION     \
+                                            " SOURCE_CODE_URL:"     SOURCE_CODE_URL      \
+                                            " HARDWARE_VERSION:"    HARDWARE_VERSION     \
+                                            " SCREEN_VERSION:"      SCREEN_VERSION       \
+                                            " SCREEN_HW_VERSION:"   SCREEN_HW_VERSION    \
+                                            " PROTOCOL_VERSION:"    PROTOCOL_VERSION     \
+                                            " MACHINE_TYPE:"        MACHINE_NAME         \
+                                            " EXTRUDER_COUNT:"      STRINGIFY(EXTRUDERS) \
+                                            " UUID:"                MACHINE_UUID         \
+                                            " Cap:WIFI:"            STRINGIFY(1)
 #define STR_COUNT_X                         " Count X:"
 #define STR_COUNT_A                         " Count A:"
 #define STR_WATCHDOG_FIRED                  "Watchdog timeout. Reset required."
@@ -140,25 +161,7 @@
 #define STR_RESEND                          "Resend: "
 #define STR_UNKNOWN_COMMAND                 "Unknown command: \""
 #define STR_ACTIVE_EXTRUDER                 "Active Extruder: "
-#define STR_X_MIN                           "x_min"
-#define STR_X_MAX                           "x_max"
-#define STR_X2_MIN                          "x2_min"
-#define STR_X2_MAX                          "x2_max"
-#define STR_Y_MIN                           "y_min"
-#define STR_Y_MAX                           "y_max"
-#define STR_Y2_MIN                          "y2_min"
-#define STR_Y2_MAX                          "y2_max"
-#define STR_Z_MIN                           "z_min"
-#define STR_Z_MAX                           "z_max"
-#define STR_Z2_MIN                          "z2_min"
-#define STR_Z2_MAX                          "z2_max"
-#define STR_Z3_MIN                          "z3_min"
-#define STR_Z3_MAX                          "z3_max"
-#define STR_Z4_MIN                          "z4_min"
-#define STR_Z4_MAX                          "z4_max"
-#define STR_Z_PROBE                         "z_probe"
-#define STR_PROBE_EN                        "probe_en"
-#define STR_FILAMENT_RUNOUT_SENSOR          "filament"
+
 #define STR_PROBE_OFFSET                    "Probe Offset"
 #define STR_SKEW_MIN                        "min_skew_factor: "
 #define STR_SKEW_MAX                        "max_skew_factor: "
@@ -277,14 +280,30 @@
 #define STR_REMINDER_SAVE_SETTINGS          "Remember to save!"
 #define STR_PASSWORD_SET                    "Password is "
 
-// LCD Menu Messages
+//
+// Endstop Names used by Endstops::report_states
+//
+#define STR_X_MIN                           "x_min"
+#define STR_X_MAX                           "x_max"
+#define STR_X2_MIN                          "x2_min"
+#define STR_X2_MAX                          "x2_max"
+#define STR_Y_MIN                           "y_min"
+#define STR_Y_MAX                           "y_max"
+#define STR_Y2_MIN                          "y2_min"
+#define STR_Y2_MAX                          "y2_max"
+#define STR_Z_MIN                           "z_min"
+#define STR_Z_MAX                           "z_max"
+#define STR_Z2_MIN                          "z2_min"
+#define STR_Z2_MAX                          "z2_max"
+#define STR_Z3_MIN                          "z3_min"
+#define STR_Z3_MAX                          "z3_max"
+#define STR_Z4_MIN                          "z4_min"
+#define STR_Z4_MAX                          "z4_max"
+#define STR_Z_PROBE                         "z_probe"
+#define STR_PROBE_EN                        "probe_en"
+#define STR_FILAMENT_RUNOUT_SENSOR          "filament"
 
-#define LANGUAGE_DATA_INCL_(M) STRINGIFY_(fontdata/langdata_##M.h)
-#define LANGUAGE_DATA_INCL(M) LANGUAGE_DATA_INCL_(M)
-
-#define LANGUAGE_INCL_(M) STRINGIFY_(../lcd/language/language_##M.h)
-#define LANGUAGE_INCL(M) LANGUAGE_INCL_(M)
-
+// General axis names
 #define STR_X "X"
 #define STR_Y "Y"
 #define STR_Z "Z"
@@ -385,6 +404,14 @@
 #define LCD_STR_E5 "E" LCD_STR_N5
 #define LCD_STR_E6 "E" LCD_STR_N6
 #define LCD_STR_E7 "E" LCD_STR_N7
+
+// Include localized LCD Menu Messages
+
+#define LANGUAGE_DATA_INCL_(M) STRINGIFY_(fontdata/langdata_##M.h)
+#define LANGUAGE_DATA_INCL(M) LANGUAGE_DATA_INCL_(M)
+
+#define LANGUAGE_INCL_(M) STRINGIFY_(../lcd/language/language_##M.h)
+#define LANGUAGE_INCL(M) LANGUAGE_INCL_(M)
 
 // Use superscripts, if possible. Evaluated at point of use.
 #define SUPERSCRIPT_TWO   TERN(NOT_EXTENDED_ISO10646_1_5X7, "^2", "²")

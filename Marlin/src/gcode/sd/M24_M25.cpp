@@ -37,27 +37,36 @@
   #include "../../feature/host_actions.h"
 #endif
 
-#if ENABLED(POWER_LOSS_RECOVERY)
+#if ENABLED(POWER_LOSS_RECOVERY) 
   #include "../../feature/powerloss.h"
+#elif ENABLED(CREALITY_POWER_LOSS)
+  #include "../../feature/PRE01_Power_loss/PRE01_Power_loss.h"
 #endif
 
 #if ENABLED(DGUS_LCD_UI_MKS)
-  #include "../../lcd/extui/lib/dgus/DGUSDisplayDef.h"
+  #include "../../lcd/extui/dgus/DGUSDisplayDef.h"
 #endif
 
 #include "../../MarlinCore.h" // for startOrResumeJob
+
+#if HAS_CUTTER
+  #include "../../feature/spindle_laser.h"
+#endif
 
 /**
  * M24: Start or Resume SD Print
  */
 void GcodeSuite::M24() {
-
+//SERIAL_ECHOPAIR("M24\n");
   #if ENABLED(DGUS_LCD_UI_MKS)
     if ((print_job_timer.isPaused() || print_job_timer.isRunning()) && !parser.seen("ST"))
       MKS_resume_print_move();
   #endif
 
   #if ENABLED(POWER_LOSS_RECOVERY)
+    if (parser.seenval('S')) card.setIndex(parser.value_long());
+    if (parser.seenval('T')) print_job_timer.resume(parser.value_long());
+  #elif ENABLED(CREALITY_POWER_LOSS)
     if (parser.seenval('S')) card.setIndex(parser.value_long());
     if (parser.seenval('T')) print_job_timer.resume(parser.value_long());
   #endif
@@ -69,10 +78,20 @@ void GcodeSuite::M24() {
     }
   #endif
 
+  #if HAS_CUTTER
+    if(laser_device.is_laser_device()) // 107011-20210925 激光模式
+    {
+      laser_device.remove_card_before_is_printing = true; //记录拔卡之前的打印状态,用于拔卡恢复时判断 20211020
+      //SERIAL_ECHOPAIR("M24 laser_device.power=", laser_device.power);
+      cutter.apply_power(laser_device.power); // 恢复激光功率
+    }
+  #endif
   if (card.isFileOpen()) {
-    card.startFileprint();            // SD card will now be read for commands
+    card.startOrResumeFilePrinting();            // SD card will now be read for commands
     startOrResumeJob();               // Start (or resume) the print job timer
     TERN_(POWER_LOSS_RECOVERY, recovery.prepare());
+    TERN_(CREALITY_POWER_LOSS, pre01_power_loss.prepare());
+    // SERIAL_ECHOLNPAIR("\r\ninfo.sd_filename: ", pre01_power_loss.info.sd_filename);
   }
 
   #if ENABLED(HOST_ACTION_COMMANDS)
@@ -93,7 +112,7 @@ void GcodeSuite::M24() {
  *   position. M24 will move the head back before resuming the print.
  */
 void GcodeSuite::M25() {
-
+// SERIAL_ECHOPAIR("M25\n");
   #if ENABLED(PARK_HEAD_ON_PAUSE)
 
     M125();
@@ -105,15 +124,28 @@ void GcodeSuite::M25() {
       if (IS_SD_PRINTING()) card.pauseSDPrint();
     #endif
 
-    #if ENABLED(POWER_LOSS_RECOVERY)
+    #if ENABLED(POWER_LOSS_RECOVERY) && DISABLED(DGUS_LCD_UI_MKS)
       if (recovery.enabled) recovery.save(true);
+    #elif ENABLED(CREALITY_POWER_LOSS) && DISABLED(DGUS_LCD_UI_MKS)
+      if (pre01_power_loss.enabled) pre01_power_loss.save(true);
     #endif
 
     print_job_timer.pause();
 
-    TERN_(DGUS_LCD_UI_MKS, MKS_pause_print_move());
+    // //107011 -20210926
+    // #if HAS_CUTTER
+    //   if(laser_device.is_laser_device()){
+    //     //保存暂停时的功率
+    //     laser_device.power = cutter.power;
+    //     SERIAL_ECHOPAIR("M24 laser_device.power=", laser_device.power);
+    //   }
+    // #endif
 
-    IF_DISABLED(DWIN_CREALITY_LCD, ui.reset_status());
+    TERN_(DGUS_LCD_UI_MKS, MKS_pause_print_move());
+    
+    TERN_(DWIN_CREALITY_LCD, ui.reset_status());
+    //IF_DISABLED(DWIN_CREALITY_LCD, ui.reset_status());
+    //TERN(DWIN_CREALITY_LCD,,ui.reset_status());
 
     #if ENABLED(HOST_ACTION_COMMANDS)
       TERN_(HOST_PROMPT_SUPPORT, host_prompt_open(PROMPT_PAUSE_RESUME, PSTR("Pause SD"), PSTR("Resume")));

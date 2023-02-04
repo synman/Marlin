@@ -159,6 +159,7 @@
  * M145 - Set heatup values for materials on the LCD. H<hotend> B<bed> F<fan speed> for S<material> (0=PLA, 1=ABS)
  * M149 - Set temperature units. (Requires TEMPERATURE_UNITS_SUPPORT)
  * M150 - Set Status LED Color as R<red> U<green> B<blue> W<white> P<bright>. Values 0-255. (Requires BLINKM, RGB_LED, RGBW_LED, NEOPIXEL_LED, PCA9533, or PCA9632).
+ * M154 - Auto-report position with interval of S<seconds>. (Requires AUTO_REPORT_POSITION)
  * M155 - Auto-report temperatures with interval of S<seconds>. (Requires AUTO_REPORT_TEMPERATURES)
  * M163 - Set a single proportion for a mixing extruder. (Requires MIXING_EXTRUDER)
  * M164 - Commit the mix and save to a virtual tool (current, or as specified by 'S'). (Requires MIXING_EXTRUDER)
@@ -632,10 +633,13 @@ private:
   #if ENABLED(PSU_CONTROL)
     static void M80();
   #endif
-
   static void M81();
-  static void M82();
-  static void M83();
+
+  #if HAS_EXTRUDERS
+    static void M82();
+    static void M83();
+  #endif
+
   static void M85();
   static void M92();
 
@@ -643,9 +647,10 @@ private:
     static void M100();
   #endif
 
-  #if EXTRUDERS
-    static void M104();
-    static void M109();
+  #if HAS_EXTRUDERS
+    static void M104_M109(const bool isM109);
+    FORCE_INLINE static void M104() { M104_M109(false); }
+    FORCE_INLINE static void M109() { M104_M109(true); }
   #endif
 
   static void M105();
@@ -673,7 +678,11 @@ private:
 
   static void M114();
   static void M115();
-  static void M117();
+
+  #if HAS_STATUS_MESSAGE
+    static void M117();
+  #endif
+
   static void M118();
   static void M119();
   static void M120();
@@ -695,8 +704,9 @@ private:
   #endif
 
   #if HAS_HEATED_BED
-    static void M140();
-    static void M190();
+    static void M140_M190(const bool isM190);
+    FORCE_INLINE static void M140() { M140_M190(false); }
+    FORCE_INLINE static void M190() { M140_M190(true); }
   #endif
 
   #if HAS_HEATED_CHAMBER
@@ -719,6 +729,10 @@ private:
 
   #if ENABLED(HAS_COLOR_LEDS)
     static void M150();
+  #endif
+
+  #if ENABLED(AUTO_REPORT_POSITION)
+    static void M154();
   #endif
 
   #if BOTH(AUTO_REPORT_TEMPERATURES, HAS_TEMP_SENSOR)
@@ -771,7 +785,7 @@ private:
 
   static void M220();
 
-  #if EXTRUDERS
+  #if HAS_EXTRUDERS
     static void M221();
   #endif
 
@@ -1069,6 +1083,8 @@ private:
   #if ENABLED(POWER_LOSS_RECOVERY)
     static void M413();
     static void M1000();
+  #elif ENABLED(CREALITY_POWER_LOSS)
+    static void M413();
   #endif
 
   #if ENABLED(SDSUPPORT)
@@ -1077,6 +1093,10 @@ private:
 
   #if ENABLED(DGUS_LCD_UI_MKS)
     static void M1002();
+  #endif
+
+  #if ENABLED(UBL_MESH_WIZARD)
+    static void M1004();
   #endif
 
   #if ENABLED(MAX7219_GCODE)

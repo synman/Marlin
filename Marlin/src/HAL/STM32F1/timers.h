@@ -25,9 +25,10 @@
  * HAL for stm32duino.com based on Libmaple and compatible (STM32F1)
  */
 
-#include <stdint.h>
+#include "../../inc/MarlinConfig.h"
+#include "HAL.h"
+
 #include <libmaple/timer.h>
-#include "../../core/boards.h"
 
 // ------------------------
 // Defines
@@ -37,7 +38,6 @@
  * TODO: Check and confirm what timer we will use for each Temps and stepper driving.
  * We should probable drive temps with PWM.
  */
-#define FORCE_INLINE __attribute__((always_inline)) inline
 
 typedef uint16_t hal_timer_t;
 #define HAL_TIMER_TYPE_MAX 0xFFFF
@@ -80,7 +80,7 @@ typedef uint16_t hal_timer_t;
   //#define TEMP_TIMER_NUM      4  // 2->4, Timer 2 for Stepper Current PWM
 #endif
 
-#if MB(BTT_SKR_MINI_E3_V1_0, BTT_SKR_E3_DIP, BTT_SKR_MINI_E3_V1_2, MKS_ROBIN_LITE)
+#if MB(BTT_SKR_MINI_E3_V1_0, BTT_SKR_E3_DIP, BTT_SKR_MINI_E3_V1_2, MKS_ROBIN_LITE, MKS_ROBIN_E3D, MKS_ROBIN_E3)
   // SKR Mini E3 boards use PA8 as FAN_PIN, so TIMER 1 is used for Fan PWM.
   #ifdef STM32_HIGH_DENSITY
     #define SERVO0_TIMER_NUM 8  // tone.cpp uses Timer 4
@@ -199,3 +199,19 @@ FORCE_INLINE static void timer_no_ARR_preload_ARPE(timer_dev *dev) {
 void timer_set_interrupt_priority(uint_fast8_t timer_num, uint_fast8_t priority);
 
 #define TIMER_OC_NO_PRELOAD 0 // Need to disable preload also on compare registers.
+
+
+#if HAS_CUTTER // 107011 激光模式
+#define LASER_TIMER_NUM	               3
+#define LASER_TIMER_DEV	               TIMER_DEV(LASER_TIMER_NUM)
+#define LASER_TIMER_FREQUENCY          1000 // PWM freq:1000Hz
+#define LASER_TIMER_PWM_MAX            255 // PWM value range: 0~255
+#define LASER_TIMER_PRESCALE(freq)     (HAL_TIMER_RATE / (freq * (LASER_TIMER_PWM_MAX + 1))) // (72M/1000*256)=281
+#define LASER_TIMER_CHAN		           1
+#define LASER_TIMER_IRQ_PRIO	         1
+
+void laser_timer_soft_pwm_init(const uint32_t frequency);
+void laser_timer_soft_pwm_start(uint8_t pwm);
+void laser_timer_soft_pwm_stop(void);
+void laser_timer_soft_pwm_close();
+#endif

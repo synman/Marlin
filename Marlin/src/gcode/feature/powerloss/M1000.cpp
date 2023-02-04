@@ -59,18 +59,19 @@ inline void plr_error(PGM_P const prefix) {
 void GcodeSuite::M1000() {
 
   if (recovery.valid()) {
-    if (parser.seen('S')) {
+    if (parser.seen_test('S')) {
       #if HAS_LCD_MENU
         ui.goto_screen(menu_job_recovery);
+        recovery.info.print_job_elapsed = print_job_timer.duration() + recovery.info.print_job_elapsed;
       #elif ENABLED(DWIN_CREALITY_LCD)
         recovery.dwin_flag = true;
-      #elif ENABLED(EXTENSIBLE_UI)
-        ExtUI::onPowerLossResume();
+        // #elif ENABLED(EXTENSIBLE_UI)
+        //   ExtUI::onPowerLossResume();  //���ڵ�Դ��Ļָ�
       #else
         SERIAL_ECHO_MSG("Resume requires LCD.");
       #endif
     }
-    else if (parser.seen('C')) {
+    else if (parser.seen_test('C')) {
       #if HAS_LCD_MENU
         lcd_power_loss_recovery_cancel();
       #else

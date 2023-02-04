@@ -47,9 +47,9 @@ void GcodeSuite::M32() {
 
     card.openFileRead(parser.string_arg, call_procedure);
 
-    if (parser.seenval('S')) card.setIndex(parser.value_long());
+    if (parser.seenval('S')) card.setIndex((parser.value_long()));  //rock_20210818
 
-    card.startFileprint();
+    card.startOrResumeFilePrinting();
 
     // Procedure calls count as normal print time.
     if (!call_procedure) startOrResumeJob();

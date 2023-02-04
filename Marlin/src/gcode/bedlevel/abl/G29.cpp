@@ -68,6 +68,13 @@
   #include "../../../module/tool_change.h"
 #endif
 
+#include "../../../module/settings.h"
+#include "../../../sd/cardreader.h"
+
+#if ENABLED(RTS_AVAILABLE)
+  #include "../../../lcd/dwin/lcd_rts.h"
+#endif
+
 #if ABL_USES_GRID
   #if ENABLED(PROBE_Y_FIRST)
     #define PR_OUTER_VAR  abl.meshCount.x
@@ -97,6 +104,14 @@ public:
     int abl_probe_index;
   #endif
 
+  #if ENABLED(AUTO_BED_LEVELING_LINEAR)
+    int abl_points;
+  #elif ENABLED(AUTO_BED_LEVELING_3POINT)
+    static constexpr int abl_points = 3;
+  #elif ABL_USES_GRID
+    static constexpr int abl_points = GRID_MAX_POINTS;
+  #endif
+
   #if ABL_USES_GRID
 
     xy_int8_t meshCount;
@@ -111,14 +126,6 @@ public:
       xy_uint8_t          grid_points;
     #else // Bilinear
       static constexpr xy_uint8_t grid_points = { GRID_MAX_POINTS_X, GRID_MAX_POINTS_Y };
-    #endif
-
-    #if ENABLED(AUTO_BED_LEVELING_LINEAR)
-      int abl_points;
-    #elif ENABLED(AUTO_BED_LEVELING_3POINT)
-      static constexpr int abl_points = 3;
-    #else
-      static constexpr int abl_points = GRID_MAX_POINTS;
     #endif
 
     #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
@@ -222,8 +229,12 @@ G29_TYPE GcodeSuite::G29() {
   TERN_(FULL_REPORT_TO_HOST_FEATURE, set_and_report_grblstate(M_PROBE));
 
   reset_stepper_timeout();
+// #if ENABLED(RTS_AVAILABLE)
+//   G29_flag = true;
+//   Count_probe = 0;
+// #endif
 
-  const bool seenQ = EITHER(DEBUG_LEVELING_FEATURE, PROBE_MANUALLY) && parser.seen('Q');
+  const bool seenQ = EITHER(DEBUG_LEVELING_FEATURE, PROBE_MANUALLY) && parser.seen_test('Q');
 
   // G29 Q is also available if debugging
   #if ENABLED(DEBUG_LEVELING_FEATURE)
@@ -235,7 +246,7 @@ G29_TYPE GcodeSuite::G29() {
     if (DISABLED(PROBE_MANUALLY) && seenQ) G29_RETURN(false);
   #endif
 
-  const bool seenA = TERN0(PROBE_MANUALLY, parser.seen('A')),
+  const bool seenA = TERN0(PROBE_MANUALLY, parser.seen_test('A')),
          no_action = seenA || seenQ,
               faux = ENABLED(DEBUG_LEVELING_FEATURE) && DISABLED(PROBE_MANUALLY) ? parser.boolval('C') : no_action;
 
@@ -245,7 +256,7 @@ G29_TYPE GcodeSuite::G29() {
   }
 
   // Send 'N' to force homing before G29 (internal only)
-  if (parser.seen('N'))
+  if (parser.seen_test('N'))
     process_subcommands_now_P(TERN(G28_L0_ENSURES_LEVELING_OFF, PSTR("G28L0"), G28_STR));
 
   // Don't allow auto-leveling without homing first
@@ -275,7 +286,7 @@ G29_TYPE GcodeSuite::G29() {
 
     #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
 
-      const bool seen_w = parser.seen('W');
+      const bool seen_w = parser.seen_test('W');
       if (seen_w) {
         if (!leveling_is_valid()) {
           SERIAL_ERROR_MSG("No bilinear grid");
@@ -308,7 +319,7 @@ G29_TYPE GcodeSuite::G29() {
           if (abl.reenable) report_current_position();
         }
         G29_RETURN(false);
-      } // parser.seen('W')
+      } // parser.seen_test('W')
 
     #else
 
@@ -317,7 +328,7 @@ G29_TYPE GcodeSuite::G29() {
     #endif
 
     // Jettison bed leveling data
-    if (!seen_w && parser.seen('J')) {
+    if (!seen_w && parser.seen_test('J')) {
       reset_bed_level();
       G29_RETURN(false);
     }
@@ -432,7 +443,7 @@ G29_TYPE GcodeSuite::G29() {
         G29_RETURN(false);
       }
     #endif
-
+    //do_blocking_move_to_z(_MAX(Z_CLEARANCE_BETWEEN_PROBES, Z_CLEARANCE_DEPLOY_PROBE));
     #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
       if (TERN1(PROBE_MANUALLY, !no_action)
         && (abl.gridSpacing != bilinear_grid_spacing || abl.probe_position_lf != bilinear_start)
@@ -604,13 +615,16 @@ G29_TYPE GcodeSuite::G29() {
     #if ABL_USES_GRID
 
       bool zig = PR_OUTER_SIZE & 1;  // Always end at RIGHT and BACK_PROBE_BED_POSITION
-
+      
       abl.measured_z = 0;
 
       // Outer loop is X with PROBE_Y_FIRST enabled
       // Outer loop is Y with PROBE_Y_FIRST disabled
-      for (PR_OUTER_VAR = 0; PR_OUTER_VAR < PR_OUTER_SIZE && !isnan(abl.measured_z); PR_OUTER_VAR++) {
-
+    #if ENABLED(RTS_AVAILABLE)
+      for (PR_OUTER_VAR = 0 ; PR_OUTER_VAR < PR_OUTER_SIZE && !isnan(abl.measured_z); PR_OUTER_VAR++) {
+    #else
+      for (PR_OUTER_VAR = 0 ; PR_OUTER_VAR < PR_OUTER_SIZE && !isnan(abl.measured_z); PR_OUTER_VAR++) {
+    #endif
         int8_t inStart, inStop, inInc;
 
         if (zig) {                      // Zig away from origin
@@ -640,7 +654,7 @@ G29_TYPE GcodeSuite::G29() {
           // Avoid probing outside the round or hexagonal area
           if (TERN0(IS_KINEMATIC, !probe.can_reach(abl.probePos))) continue;
 
-          if (abl.verbose_level) SERIAL_ECHOLNPAIR("Probing mesh point ", pt_index, "/", abl.abl_points, ".");
+          if (abl.verbose_level) SERIAL_ECHOLNPAIR("Probing mesh point ", pt_index, "/", abl.abl_points, "."); //pt_index Ŀǰ�ĵ�ƽ�㣬abl.abl_points�ܵĵ�ƽ����
           TERN_(HAS_STATUS_MESSAGE, ui.status_printf_P(0, PSTR(S_FMT " %i/%i"), GET_TEXT(MSG_PROBING_MESH), int(pt_index), int(abl.abl_points)));
 
           abl.measured_z = faux ? 0.001f * random(-100, 101) : probe.probe_at_point(abl.probePos, raise_after, abl.verbose_level);
@@ -672,6 +686,23 @@ G29_TYPE GcodeSuite::G29() {
             z_values[abl.meshCount.x][abl.meshCount.y] = z;
             TERN_(EXTENSIBLE_UI, ExtUI::onMeshUpdate(abl.meshCount, z));
 
+          #endif
+
+          #if ENABLED(RTS_AVAILABLE)
+              if(!IS_SD_PRINTING())
+              {
+                // if((showcount ++) < GRID_MAX_POINTS_X * GRID_MAX_POINTS_Y)
+                // {
+                //   rtscheck.RTS_SndData(((showcount * 50) / (GRID_MAX_POINTS_X * GRID_MAX_POINTS_Y)), AUTO_BED_LEVEL_TITLE_VP);
+                //   rtscheck.RTS_SndData(((showcount * 100) / (GRID_MAX_POINTS_X * GRID_MAX_POINTS_Y)), AUTO_LEVELING_PERCENT_DATA_VP);
+                //   rtscheck.RTS_SndData(ExchangePageBase + 26, ExchangepageAddr);
+                //   change_page_font = 26;
+                // }
+                  rtscheck.RTS_SndData((uint16_t)((100.0 / (GRID_MAX_POINTS_X * GRID_MAX_POINTS_Y) * pt_index) / 2) , AUTO_BED_LEVEL_TITLE_VP);
+                  rtscheck.RTS_SndData((uint16_t)(100.0 / (GRID_MAX_POINTS_X * GRID_MAX_POINTS_Y) * pt_index), AUTO_LEVELING_PERCENT_DATA_VP);
+                  rtscheck.RTS_SndData(ExchangePageBase + 26, ExchangepageAddr);
+                  change_page_font = 26;
+              }
           #endif
 
           abl.reenable = false;
@@ -743,6 +774,7 @@ G29_TYPE GcodeSuite::G29() {
       if (!abl.dryrun) extrapolate_unprobed_bed_level();
       print_bilinear_leveling_grid();
 
+      settings.save();
       refresh_bed_level();
 
       TERN_(ABL_BILINEAR_SUBDIVISION, print_bilinear_leveling_grid_virt());
@@ -896,7 +928,21 @@ G29_TYPE GcodeSuite::G29() {
     DWIN_CompletedLeveling();
   #endif
 
+  settings.save();
+  process_subcommands_now_P(PSTR("G28"));  //��ԭ��
+  // process_subcommands_now_P("G1 Z10");// 修改为z10 与屏幕显示的数据保持一致
+  process_subcommands_now_P("G1 Z0");// Z10 有偏移风险
   report_current_position();
+
+  //do_blocking_move_to_xy(safe_homing_xy);
+
+  #if ENABLED(RTS_AVAILABLE)
+    // G29_flag = false;
+    // Count_probe = 0;
+    // Count_first = 0;
+    RTS_AutoBedLevelPage();
+
+  #endif
 
   TERN_(FULL_REPORT_TO_HOST_FEATURE, set_and_report_grblstate(M_IDLE));
 

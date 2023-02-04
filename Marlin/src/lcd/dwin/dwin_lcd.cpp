@@ -147,6 +147,9 @@ void DWIN_UpdateLCD(void) {
   size_t i = 0;
   DWIN_Byte(i, 0x3D);
   DWIN_Send(i);
+  // SERIAL_ECHOLNPGM("The detection of break:");
+  // SERIAL_PRINT(READ(CHECKFILAMENT_PIN), PrintBase::Hex);
+  //SERIAL_PRINT(READ(CHECKFILAMENT_PIN), HEX);
 }
 
 /*---------------------------------------- Drawing functions ----------------------------------------*/

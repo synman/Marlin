@@ -35,6 +35,7 @@ GcodeSuite gcode;
 #include "parser.h"
 #include "queue.h"
 #include "../module/motion.h"
+#include "../feature/bedlevel/bedlevel.h"
 
 #if ENABLED(PRINTCOUNTER)
   #include "../module/printcounter.h"
@@ -47,13 +48,16 @@ GcodeSuite gcode;
 #if ENABLED(POWER_LOSS_RECOVERY)
   #include "../sd/cardreader.h"
   #include "../feature/powerloss.h"
+#elif ENABLED(CREALITY_POWER_LOSS)
+  #include "../sd/cardreader.h"
+  #include "../feature/PRE01_Power_loss/PRE01_Power_loss.h"
 #endif
 
 #if ENABLED(CANCEL_OBJECTS)
   #include "../feature/cancel_object.h"
 #endif
 
-#if ENABLED(LASER_MOVE_POWER)
+#if ENABLED(LASER_FEATURE)
   #include "../feature/spindle_laser.h"
 #endif
 
@@ -64,7 +68,9 @@ GcodeSuite gcode;
 #if ENABLED(PASSWORD_FEATURE)
   #include "../feature/password/password.h"
 #endif
-
+#if ENABLED(CREALITY_POWER_LOSS)
+  #include "../feature/PRE01_Power_loss/PRE01_Power_loss.h"
+#endif
 #include "../MarlinCore.h" // for idle, kill
 
 // Inactivity shutdown
@@ -140,7 +146,7 @@ int8_t GcodeSuite::get_target_e_stepper_from_command() {
  *  - Set the feedrate, if included
  */
 void GcodeSuite::get_destination_from_command() {
-  xyze_bool_t seen = { false, false, false, false };
+  xyze_bool_t seen{false};
 
   #if ENABLED(CANCEL_OBJECTS)
     const bool &skip_move = cancelable.skipping;
@@ -149,8 +155,8 @@ void GcodeSuite::get_destination_from_command() {
   #endif
 
   // Get new XYZ position, whether absolute or relative
-  LOOP_XYZ(i) {
-    if ( (seen[i] = parser.seenval(XYZ_CHAR(i))) ) {
+  LOOP_LINEAR_AXES(i) {
+    if ( (seen[i] = parser.seenval(AXIS_CHAR(i))) ) {
       const float v = parser.value_axis_units((AxisEnum)i);
       if (skip_move)
         destination[i] = current_position[i];
@@ -173,6 +179,10 @@ void GcodeSuite::get_destination_from_command() {
     // Only update power loss recovery on moves with E
     if (recovery.enabled && IS_SD_PRINTING() && seen.e && (seen.x || seen.y))
       recovery.save();
+  #elif ENABLED(CREALITY_POWER_LOSS) && !PIN_EXISTS(POWER_LOSS)
+      // Only update power loss recovery on moves with E
+    if (pre01_power_loss.enabled && IS_SD_PRINTING() && seen.e && (seen.x || seen.y))
+      pre01_power_loss.save();
   #endif
 
   if (parser.linearval('F') > 0)
@@ -188,15 +198,34 @@ void GcodeSuite::get_destination_from_command() {
     M165();
   #endif
 
-  #if ENABLED(LASER_MOVE_POWER)
-    // Set the laser power in the planner to configure this move
-    if (parser.seen('S')) {
-      const float spwr = parser.value_float();
-      cutter.inline_power(TERN(SPINDLE_LASER_PWM, cutter.power_to_range(cutter_power_t(round(spwr))), spwr > 0 ? 255 : 0));
+  #if ENABLED(LASER_FEATURE)
+    if(laser_device.is_laser_device()){ //修复 FDM 打印激光Gcode时，"S"参数会造成死机的bug
+      if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS || cutter.cutter_mode == CUTTER_MODE_DYNAMIC) {
+        // Set the cutter power in the planner to configure this move
+        cutter.last_feedrate_mm_m = 0;
+        if (WITHIN(parser.codenum, 1, TERN(ARC_SUPPORT, 3, 1)) || TERN0(BEZIER_CURVE_SUPPORT, parser.codenum == 5)) {
+          planner.laser_inline.status.isPowered = true;
+          if (parser.seen('S')) {
+            const uint16_t spwr = parser.value_ushort();
+            if(laser_device.is_laser_device())
+            {
+              //将0-1000 转0-255
+              cutter.inline_power(laser_device.power16_to_8(spwr));
+            }else {
+              cutter.inline_power(cutter.power_to_range(cutter_power_t(spwr)));
+            }
+          }
+          // else{ // 107011 -20210925 不带S参数的关闭激光
+          //   cutter.inline_power(0);
+          // }
+        }
+        else if (parser.codenum == 0) {
+          planner.laser_inline.status.isPowered = false; // For dynamic mode we need to flag it off
+          planner.laser_inline.power = 0;                // This is planner-based so only set power and do not disable inline control flags.
+        }
+      }
     }
-    else if (ENABLED(LASER_MOVE_G0_OFF) && parser.codenum == 0) // G0
-      cutter.set_inline_enabled(false);
-  #endif
+  #endif // LASER_FEATURE
 }
 
 /**
@@ -211,7 +240,7 @@ void GcodeSuite::dwell(millis_t time) {
  * When G29_RETRY_AND_RECOVER is enabled, call G29() in
  * a loop with recovery and retry handling.
  */
-#if BOTH(HAS_LEVELING, G29_RETRY_AND_RECOVER)
+#if ENABLED(G29_RETRY_AND_RECOVER)
 
   void GcodeSuite::event_probe_recover() {
     TERN_(HOST_PROMPT_SUPPORT, host_prompt_do(PROMPT_INFO, PSTR("G29 Retrying"), DISMISS_STR));
@@ -222,6 +251,10 @@ void GcodeSuite::dwell(millis_t time) {
       process_subcommands_now_P(PSTR(G29_RECOVER_COMMANDS));
     #endif
   }
+
+  #if ENABLED(G29_HALT_ON_FAILURE)
+    #include "../lcd/marlinui.h"
+  #endif
 
   void GcodeSuite::event_probe_failure() {
     #ifdef ACTION_ON_G29_FAILURE
@@ -262,7 +295,7 @@ void GcodeSuite::dwell(millis_t time) {
     #endif
   }
 
-#endif // HAS_LEVELING && G29_RETRY_AND_RECOVER
+#endif // G29_RETRY_AND_RECOVER
 
 /**
  * Process the parsed command and dispatch it to its handler
@@ -516,7 +549,7 @@ void GcodeSuite::process_parsed_command(const bool no_ok/*=false*/) {
         case 100: M100(); break;                                  // M100: Free Memory Report
       #endif
 
-      #if EXTRUDERS
+      #if HAS_EXTRUDERS
         case 104: M104(); break;                                  // M104: Set hot end temperature
         case 109: M109(); break;                                  // M109: Wait for hotend temperature to reach target
       #endif
@@ -561,6 +594,10 @@ void GcodeSuite::process_parsed_command(const bool no_ok/*=false*/) {
         case 193: M193(); break;                                  // M193: Wait for cooler temperature to reach target
       #endif
 
+      #if ENABLED(AUTO_REPORT_POSITION)
+        case 154: M154(); break;                                  // M154: Set position auto-report interval
+      #endif
+
       #if BOTH(AUTO_REPORT_TEMPERATURES, HAS_TEMP_SENSOR)
         case 155: M155(); break;                                  // M155: Set temperature auto-report interval
       #endif
@@ -588,14 +625,18 @@ void GcodeSuite::process_parsed_command(const bool no_ok/*=false*/) {
       #endif
       case 81: M81(); break;                                      // M81: Turn off Power, including Power Supply, if possible
 
-      case 82: M82(); break;                                      // M82: Set E axis normal mode (same as other axes)
-      case 83: M83(); break;                                      // M83: Set E axis relative mode
+      #if HAS_EXTRUDERS
+        case 82: M82(); break;                                    // M82: Set E axis normal mode (same as other axes)
+        case 83: M83(); break;                                    // M83: Set E axis relative mode
+      #endif
       case 18: case 84: M18_M84(); break;                         // M18/M84: Disable Steppers / Set Timeout
       case 85: M85(); break;                                      // M85: Set inactivity stepper shutdown timeout
       case 92: M92(); break;                                      // M92: Set the steps-per-unit for one or more axes
       case 114: M114(); break;                                    // M114: Report current position
       case 115: M115(); break;                                    // M115: Report capabilities
-      case 117: M117(); break;                                    // M117: Set LCD message text, if possible
+
+      case 117: TERN_(HAS_STATUS_MESSAGE, M117()); break;         // M117: Set LCD message text, if possible
+
       case 118: M118(); break;                                    // M118: Display a message in the host console
       case 119: M119(); break;                                    // M119: Report endstop states
       case 120: M120(); break;                                    // M120: Enable endstops
@@ -666,7 +707,7 @@ void GcodeSuite::process_parsed_command(const bool no_ok/*=false*/) {
 
       case 220: M220(); break;                                    // M220: Set Feedrate Percentage: S<percent> ("FR" on your LCD)
 
-      #if EXTRUDERS
+      #if HAS_EXTRUDERS
         case 221: M221(); break;                                  // M221: Set Flow Percentage
       #endif
 
@@ -977,6 +1018,8 @@ void GcodeSuite::process_parsed_command(const bool no_ok/*=false*/) {
       #if ENABLED(POWER_LOSS_RECOVERY)
         case 413: M413(); break;                                  // M413: Enable/disable/query Power-Loss Recovery
         case 1000: M1000(); break;                                // M1000: [INTERNAL] Resume from power-loss
+      #elif ENABLED(CREALITY_POWER_LOSS)
+        case 413: M413(); break;                                  // M413: Enable/disable/query Power-Loss Recovery
       #endif
 
       #if ENABLED(SDSUPPORT)
@@ -985,6 +1028,10 @@ void GcodeSuite::process_parsed_command(const bool no_ok/*=false*/) {
 
       #if ENABLED(DGUS_LCD_UI_MKS)
         case 1002: M1002(); break;                                // M1002: [INTERNAL] Tool-change and Relative E Move
+      #endif
+
+      #if ENABLED(UBL_MESH_WIZARD)
+        case 1004: M1004(); break;                                // M1004: UBL Mesh Wizard
       #endif
 
       #if ENABLED(MAX7219_GCODE)
@@ -1031,6 +1078,7 @@ void GcodeSuite::process_next_command() {
   PORT_REDIRECT(SERIAL_PORTMASK(command.port));
 
   TERN_(POWER_LOSS_RECOVERY, recovery.queue_index_r = queue.ring_buffer.index_r);
+  TERN_(CREALITY_POWER_LOSS, pre01_power_loss.queue_index_r = queue.ring_buffer.index_r);
 
   if (DEBUGGING(ECHO)) {
     SERIAL_ECHO_START();
@@ -1060,7 +1108,7 @@ void GcodeSuite::process_subcommands_now_P(PGM_P pgcode) {
     strncpy_P(cmd, pgcode, len);                      // Copy the command to the stack
     cmd[len] = '\0';                                  // End with a nul
     parser.parse(cmd);                                // Parse the command
-    process_parsed_command(true);                     // Process it
+    process_parsed_command(true);                     // Process it (no "ok")
     if (!delim) break;                                // Last command?
     pgcode = delim + 1;                               // Get the next command
   }
@@ -1073,7 +1121,7 @@ void GcodeSuite::process_subcommands_now(char * gcode) {
     char * const delim = strchr(gcode, '\n');         // Get address of next newline
     if (delim) *delim = '\0';                         // Replace with nul
     parser.parse(gcode);                              // Parse the current command
-    process_parsed_command(true);                     // Process it
+    process_parsed_command(true);                     // Process it (no "ok")
     if (!delim) break;                                // Last command?
     *delim = '\n';                                    // Put back the newline
     gcode = delim + 1;                                // Get the next command

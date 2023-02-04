@@ -62,8 +62,17 @@
   #include "../../feature/spindle_laser.h"
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "../../lcd/dwin/lcd_rts.h"
+#endif
+
 #define DEBUG_OUT ENABLED(DEBUG_LEVELING_FEATURE)
 #include "../../core/debug_out.h"
+
+#if HAS_CUTTER
+  #include "../../feature/spindle_laser.h"
+#endif
+
 
 #if ENABLED(QUICK_HOME)
 
@@ -73,7 +82,7 @@
     current_position.set(0.0, 0.0);
     sync_plan_position();
 
-    const int x_axis_home_dir = x_home_dir(active_extruder);
+    const int x_axis_home_dir = TOOL_X_HOME_DIR(active_extruder);
 
     const float mlx = max_length(X_AXIS),
                 mly = max_length(Y_AXIS),
@@ -219,8 +228,8 @@ void GcodeSuite::G28() {
   #endif
 
   #if ENABLED(MARLIN_DEV_MODE)
-    if (parser.seen('S')) {
-      LOOP_XYZ(a) set_axis_is_at_home((AxisEnum)a);
+    if (parser.seen_test('S')) {
+      LOOP_LINEAR_AXES(a) set_axis_is_at_home((AxisEnum)a);
       sync_plan_position();
       SERIAL_ECHOLNPGM("Simulated Homing");
       report_current_position();
@@ -235,6 +244,11 @@ void GcodeSuite::G28() {
   }
 
   TERN_(DWIN_CREALITY_LCD, DWIN_StartHoming());
+
+  #if ENABLED(RTS_AVAILABLE)
+    home_flag = true;
+  #endif
+
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingStart());
 
   planner.synchronize();          // Wait for planner moves to finish!
@@ -321,10 +335,10 @@ void GcodeSuite::G28() {
 
   #else
 
-    const bool homeZ = parser.seen('Z'),
+    const bool homeZ = parser.seen_test('Z'),
                needX = homeZ && TERN0(Z_SAFE_HOMING, axes_should_home(_BV(X_AXIS))),
                needY = homeZ && TERN0(Z_SAFE_HOMING, axes_should_home(_BV(Y_AXIS))),
-               homeX = needX || parser.seen('X'), homeY = needY || parser.seen('Y'),
+               homeX = needX || parser.seen_test('X'), homeY = needY || parser.seen_test('Y'),
                home_all = homeX == homeY && homeX == homeZ, // All or None
                doX = home_all || homeX, doY = home_all || homeY, doZ = home_all || homeZ;
 
@@ -336,12 +350,19 @@ void GcodeSuite::G28() {
 
     const float z_homing_height = parser.seenval('R') ? parser.value_linear_units() : Z_HOMING_HEIGHT;
 
-    if (z_homing_height && (doX || doY || TERN0(Z_SAFE_HOMING, doZ))) {
-      // Raise Z before homing any other axes and z is not already high enough (never lower z)
-      if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPAIR("Raise Z (before homing) by ", z_homing_height);
-      do_z_clearance(z_homing_height);
-      TERN_(BLTOUCH, bltouch.init());
-    }
+    #if HAS_CUTTER
+      if(laser_device.is_laser_device())
+      {
+      }else
+    #endif
+      {
+        if (z_homing_height && (doX || doY || TERN0(Z_SAFE_HOMING, doZ))) {
+          // Raise Z before homing any other axes and z is not already high enough (never lower z)
+          if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPAIR("Raise Z (before homing) by ", z_homing_height);
+          do_z_clearance(z_homing_height);
+          TERN_(BLTOUCH, bltouch.init());
+        }
+      }
 
     #if ENABLED(QUICK_HOME)
 
@@ -447,6 +468,7 @@ void GcodeSuite::G28() {
   #endif
 
   TERN_(HAS_LEVELING, set_bed_leveling_enabled(leveling_restore_state));
+  // set_bed_leveling_enabled(true);   //rock_20210701
 
   restore_feedrate_and_scaling();
 
@@ -474,9 +496,21 @@ void GcodeSuite::G28() {
   ui.refresh();
 
   TERN_(DWIN_CREALITY_LCD, DWIN_CompletedHoming());
+  TERN_(RTS_AVAILABLE, RTS_MoveAxisHoming());
+  TERN_(RTS_AVAILABLE, rtscheck.RTS_SndData(0, MOTOR_FREE_ICON_VP));
+
+  #if ENABLED(RTS_AVAILABLE)
+    home_flag  = false;
+  //   home_count = true;
+  //   endstops.enable_z_probe(false);
+  #endif
+  
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingComplete());
 
   report_current_position();
+
+  
+  //process_subcommands_now_P(PSTR("M420 S1 Z2")); //Enable automatic compensation function rock_2021.07.17
 
   if (ENABLED(NANODLP_Z_SYNC) && (doZ || ENABLED(NANODLP_ALL_AXIS)))
     SERIAL_ECHOLNPGM(STR_Z_MOVE_COMP);

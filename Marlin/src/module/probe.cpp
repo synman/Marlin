@@ -81,6 +81,10 @@
   #include "../lcd/extui/ui_api.h"
 #endif
 
+#if ENABLED(RTS_AVAILABLE)
+  #include "../lcd/dwin/lcd_rts.h"
+#endif
+
 #define DEBUG_OUT ENABLED(DEBUG_LEVELING_FEATURE)
 #include "../core/debug_out.h"
 
@@ -243,7 +247,7 @@ xyz_pos_t Probe::offset; // Initialized by settings.load()
   #endif
 
   void Probe::set_probing_paused(const bool dopause) {
-    TERN_(PROBING_HEATERS_OFF, thermalManager.pause(dopause));
+    TERN_(PROBING_HEATERS_OFF, thermalManager.pause_heaters(dopause));
     TERN_(PROBING_FANS_OFF, thermalManager.set_fans_paused(dopause));
     #if ENABLED(PROBING_STEPPERS_OFF)
       IF_DISABLED(DELTA, static uint8_t old_trusted);
@@ -360,31 +364,33 @@ FORCE_INLINE void probe_specific_action(const bool deploy) {
       #define WAIT_FOR_BED_HEAT
     #endif
 
-    DEBUG_ECHOPGM("Preheating ");
+    if (hotend_temp > thermalManager.wholeDegHotend(0) + 5 || bed_temp > thermalManager.wholeDegBed() + 5) {
+      DEBUG_ECHOPGM("Preheating ");
 
-    #if ENABLED(WAIT_FOR_NOZZLE_HEAT)
-      const celsius_t hotendPreheat = hotend_temp > thermalManager.degTargetHotend(0) ? hotend_temp : 0;
-      if (hotendPreheat) {
-        DEBUG_ECHOPAIR("hotend (", hotendPreheat, ")");
-        thermalManager.setTargetHotend(hotendPreheat, 0);
-      }
-    #elif ENABLED(WAIT_FOR_BED_HEAT)
-      constexpr celsius_t hotendPreheat = 0;
-    #endif
+      #if ENABLED(WAIT_FOR_NOZZLE_HEAT)
+        const celsius_t hotendPreheat = hotend_temp > thermalManager.degTargetHotend(0) ? hotend_temp : 0;
+        if (hotendPreheat) {
+          DEBUG_ECHOPAIR("hotend (", hotendPreheat, ")");
+          thermalManager.setTargetHotend(hotendPreheat, 0);
+        }
+      #elif ENABLED(WAIT_FOR_BED_HEAT)
+        constexpr celsius_t hotendPreheat = 0;
+      #endif
 
-    #if ENABLED(WAIT_FOR_BED_HEAT)
-      const celsius_t bedPreheat = bed_temp > thermalManager.degTargetBed() ? bed_temp : 0;
-      if (bedPreheat) {
-        if (hotendPreheat) DEBUG_ECHOPGM(" and ");
-        DEBUG_ECHOPAIR("bed (", bedPreheat, ")");
-        thermalManager.setTargetBed(bedPreheat);
-      }
-    #endif
+      #if ENABLED(WAIT_FOR_BED_HEAT)
+        const celsius_t bedPreheat = bed_temp > thermalManager.degTargetBed() ? bed_temp : 0;
+        if (bedPreheat) {
+          if (hotendPreheat) DEBUG_ECHOPGM(" and ");
+          DEBUG_ECHOPAIR("bed (", bedPreheat, ")");
+          thermalManager.setTargetBed(bedPreheat);
+        }
+      #endif
 
-    DEBUG_EOL();
+      DEBUG_EOL();
 
-    TERN_(WAIT_FOR_NOZZLE_HEAT, if (hotend_temp > thermalManager.wholeDegHotend(0) + (TEMP_WINDOW)) thermalManager.wait_for_hotend(0));
-    TERN_(WAIT_FOR_BED_HEAT,    if (bed_temp > thermalManager.wholeDegBed() + (TEMP_BED_WINDOW))    thermalManager.wait_for_bed_heating());
+      TERN_(WAIT_FOR_NOZZLE_HEAT, if (hotend_temp > thermalManager.wholeDegHotend(0) + (TEMP_WINDOW)) thermalManager.wait_for_hotend(0));
+      TERN_(WAIT_FOR_BED_HEAT,    if (bed_temp > thermalManager.wholeDegBed() + (TEMP_BED_WINDOW))    thermalManager.wait_for_bed_heating());
+    }
   }
 
 #endif
@@ -507,9 +513,9 @@ bool Probe::probe_down_to_z(const_float_t z, const_feedRate_t fr_mm_s) {
   // Check to see if the probe was triggered
   const bool probe_triggered =
     #if BOTH(DELTA, SENSORLESS_PROBING)
-      endstops.trigger_state() & (_BV(X_MIN) | _BV(Y_MIN) | _BV(Z_MIN))
+      endstops.trigger_state() & (_BV(X_MAX) | _BV(Y_MAX) | _BV(Z_MAX))
     #else
-      TEST(endstops.trigger_state(), TERN(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN, Z_MIN, Z_MIN_PROBE))
+      TEST(endstops.trigger_state(), Z_MIN_PROBE)
     #endif
   ;
 
@@ -595,6 +601,9 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
     // Do a first probe at the fast speed
     const bool probe_fail = probe_down_to_z(z_probe_low_point, fr_mm_s),            // No probe trigger?
                early_fail = (scheck && current_position.z > -offset.z + clearance); // Probe triggered too high?
+    #if ENABLED(FIX_MOUNTED_PROBE)
+      Count_probe = 1;
+    #endif
     #if ENABLED(DEBUG_LEVELING_FEATURE)
       if (DEBUGGING(LEVELING) && (probe_fail || early_fail)) {
         DEBUG_ECHOPGM_P(plbl);
@@ -646,6 +655,14 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
     float probes[TOTAL_PROBING];
   #endif
 
+  // #if ENABLED(FIX_MOUNTED_PROBE)
+  //   digitalWrite(COM_PIN, HIGH);
+  //   delay(200);
+  //   digitalWrite(COM_PIN, LOW);
+  //   delay(200);
+  //   AutohomeZflag = false;
+  // #endif
+
   #if TOTAL_PROBING > 2
     float probes_z_sum = 0;
     for (
@@ -659,6 +676,11 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
     {
       // If the probe won't tare, return
       if (TERN0(PROBE_TARE, tare())) return true;
+
+      // Probe downward slowly to find the bed
+      #if ENABLED(FIX_MOUNTED_PROBE)
+        Count_probe = 2;
+      #endif
 
       // Probe downward slowly to find the bed
       if (try_to_probe(PSTR("SLOW"), z_probe_low_point, MMM_TO_MMS(Z_PROBE_FEEDRATE_SLOW),
@@ -788,6 +810,15 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
   }
 
   if (isnan(measured_z)) {
+    
+    #if ENABLED(RTS_AVAILABLE)
+      waitway = 0;
+      rtscheck.RTS_SndData(ExchangePageBase + 41, ExchangepageAddr);
+      change_page_font = 41;
+      rtscheck.RTS_SndData(Error_203, ABNORMAL_PAGE_TEXT_VP);
+      errorway = 3;
+    #endif
+
     stow();
     LCD_MESSAGEPGM(MSG_LCD_PROBING_FAILED);
     #if DISABLED(G29_RETRY_AND_RECOVER)

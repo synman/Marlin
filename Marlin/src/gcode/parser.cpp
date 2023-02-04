@@ -114,6 +114,7 @@ void GCodeParser::parse(char *p) {
 
   reset(); // No codes to report
 
+  //把接收到Gcode转成大写
   auto uppercase = [](char c) {
     if (TERN0(GCODE_CASE_INSENSITIVE, WITHIN(c, 'a', 'z')))
       c += 'A' - 'a';
@@ -132,10 +133,10 @@ void GCodeParser::parse(char *p) {
   }
 
   // *p now points to the current command, which should be G, M, or T
-  command_ptr = p;
+  command_ptr = p;  //保存串口接收到的有效数据，保存到command_ptr
 
   // Get the command letter, which must be G, M, or T
-  const char letter = uppercase(*p++);
+  const char letter = uppercase(*p++);  // p -> M420 S1
 
   // Nullify asterisk and trailing whitespace
   char *starpos = strchr(p, '*');
@@ -150,12 +151,30 @@ void GCodeParser::parse(char *p) {
   #endif
 
   /**
-   * Screen for good command letters. G, M, and T are always accepted.
-   * With Motion Modes enabled any axis letter can come first.
+   * Screen for good command letters.
    * With Realtime Reporting, commands S000, P000, and R000 are allowed.
    */
+  #if ENABLED(REALTIME_REPORTING_COMMANDS)
+    switch (letter) {
+      case 'P': case 'R' ... 'S': {
+        uint8_t digits = 0;
+        char *a = p;
+        while (*a++ == '0') digits++; // Count up '0' characters
+        if (digits == 3) {            // Three '0' digits is a good command
+          codenum = 0;
+          command_letter = letter;
+          return;
+        }
+      }
+    }
+  #endif
+
+  /**
+   * Screen for good command letters. G, M, and T are always accepted.
+   * With Motion Modes enabled any axis letter can come first.
+   */
   switch (letter) {
-    case 'G': case 'M': case 'T': TERN_(MARLIN_DEV_MODE, case 'D':)
+    case 'G': case 'M': case 'T': TERN_(MARLIN_DEV_MODE, case 'D':) {
       // Skip spaces to get the numeric part
       while (*p == ' ') p++;
 
@@ -177,20 +196,18 @@ void GCodeParser::parse(char *p) {
       // A '?' signifies an unknown command
       command_letter = letter;
 
-      {
-        #if ENABLED(SIGNED_CODENUM)
-          int sign = 1; // Allow for a negative code like D-1 or T-1
-          if (*p == '-') { sign = -1; ++p; }
-        #endif
+      #if ENABLED(SIGNED_CODENUM)
+        int sign = 1; // Allow for a negative code like D-1 or T-1
+        if (*p == '-') { sign = -1; ++p; }
+      #endif
 
-        // Get the code number - integer digits only
-        codenum = 0;
+      // Get the code number - integer digits only
+      codenum = 0;
 
-        do { codenum = codenum * 10 + *p++ - '0'; } while (NUMERIC(*p));
+      do { codenum = codenum * 10 + *p++ - '0'; } while (NUMERIC(*p));
 
-        // Apply the sign, if any
-        TERN_(SIGNED_CODENUM, codenum *= sign);
-      }
+      // Apply the sign, if any
+      TERN_(SIGNED_CODENUM, codenum *= sign);
 
       // Allow for decimal point in command
       #if USE_GCODE_SUBCODES
@@ -206,46 +223,40 @@ void GCodeParser::parse(char *p) {
 
       #if ENABLED(GCODE_MOTION_MODES)
         if (letter == 'G'
-          && (codenum <= TERN(ARC_SUPPORT, 3, 1) || codenum == 5 || TERN0(G38_PROBE_TARGET, codenum == 38))
+          && (codenum <= TERN(ARC_SUPPORT, 3, 1) || TERN0(BEZIER_CURVE_SUPPORT, codenum == 5) || TERN0(G38_PROBE_TARGET, codenum == 38))
         ) {
           motion_mode_codenum = codenum;
           TERN_(USE_GCODE_SUBCODES, motion_mode_subcode = subcode);
         }
       #endif
 
-      break;
+    } break;
 
     #if ENABLED(GCODE_MOTION_MODES)
-      #if ENABLED(ARC_SUPPORT)
-        case 'I' ... 'J':
-          if (motion_mode_codenum != 2 && motion_mode_codenum != 3) return;
+
+      #if EITHER(BEZIER_CURVE_SUPPORT, ARC_SUPPORT)
+        case 'I' ... 'J': case 'P':
+          if (TERN1(BEZIER_CURVE_SUPPORT, motion_mode_codenum != 5)
+            && TERN1(ARC_P_CIRCLES, !WITHIN(motion_mode_codenum, 2, 3))
+          ) return;
       #endif
-      case 'Q':
-        if (motion_mode_codenum != 5) return;
+
+      #if ENABLED(BEZIER_CURVE_SUPPORT)
+        case 'Q': if (motion_mode_codenum != 5) return;
+      #endif
+
+      #if ENABLED(ARC_SUPPORT)
+        case 'R': if (!WITHIN(motion_mode_codenum, 2, 3)) return;
+      #endif
+
       case 'X' ... 'Z': case 'E' ... 'F':
         if (motion_mode_codenum < 0) return;
         command_letter = 'G';
         codenum = motion_mode_codenum;
         TERN_(USE_GCODE_SUBCODES, subcode = motion_mode_subcode);
         p--; // Back up one character to use the current parameter
-      break;
-    #endif
+        break;
 
-    #if ENABLED(REALTIME_REPORTING_COMMANDS)
-      case 'P': case 'R': {
-        if (letter == 'R') {
-          #if ENABLED(GCODE_MOTION_MODES)
-            if (ENABLED(ARC_SUPPORT) && !WITHIN(motion_mode_codenum, 2, 3)) return;
-          #endif
-        }
-        else if (TERN0(GCODE_MOTION_MODES, motion_mode_codenum != 5)) return;
-      } // fall-thru
-      case 'S': {
-        codenum = 0;                  // The only valid codenum is 0
-        uint8_t digits = 0;
-        while (*p++ == '0') digits++; // Count up '0' characters
-        command_letter = (digits == 3) ? letter : '?'; // Three '0' digits is a good command
-      } return;                       // No parameters needed, so return now
     #endif
 
     default: return;
@@ -253,20 +264,14 @@ void GCodeParser::parse(char *p) {
 
   // The command parameters (if any) start here, for sure!
 
-  #if DISABLED(FASTER_GCODE_PARSER)
-    command_args = p; // Scan for parameters in seen()
-  #endif
+  IF_DISABLED(FASTER_GCODE_PARSER, command_args = p); // Scan for parameters in seen()
 
   // Only use string_arg for these M codes
-  if (letter == 'M') switch (codenum) {
-    #if ENABLED(GCODE_MACROS)
-      case 810 ... 819:
-    #endif
-    #if ENABLED(EXPECTED_PRINTER_CHECK)
-      case 16:
-    #endif
+  if (letter == 'M') switch (codenum) { //codenum = 420
+    TERN_(GCODE_MACROS, case 810 ... 819:)
+    TERN_(EXPECTED_PRINTER_CHECK, case 16:)
     case 23: case 28: case 30: case 117 ... 118: case 928:
-      string_arg = unescape_string(p);
+      string_arg = unescape_string(p);   // string_arg -> S1
       return;
     default: break;
   }
@@ -287,7 +292,7 @@ void GCodeParser::parse(char *p) {
     bool quoted_string_arg = false;
   #endif
   string_arg = nullptr;
-  while (const char param = uppercase(*p++)) {  // Get the next parameter. A NUL ends the loop
+  while (const char param = uppercase(*p++)) {  // Get the next parameter. A NUL ends the loop // P -> 1
 
     // Special handling for M32 [P] !/path/to/file.g#
     // The path must be the last parameter
@@ -320,9 +325,9 @@ void GCodeParser::parse(char *p) {
         const bool is_str = (*p == '"'), has_val = is_str || valid_float(p);
         char * const valptr = has_val ? is_str ? unescape_string(p) : p : nullptr;
       #else
-        const bool has_val = valid_float(p);
+        const bool has_val = valid_float(p);   //has_val = 1  Gcode的参数，判断参数的第一个字符是啥
         #if ENABLED(FASTER_GCODE_PARSER)
-          char * const valptr = has_val ? p : nullptr;
+          char * const valptr = has_val ? p : nullptr;  //valptr 为接收到参数的第一个数据地址
         #endif
       #endif
 
@@ -342,7 +347,7 @@ void GCodeParser::parse(char *p) {
 
       if (TERN0(DEBUG_GCODE_PARSER, debug)) SERIAL_EOL();
 
-      TERN_(FASTER_GCODE_PARSER, set(param, valptr)); // Set parameter exists and pointer (nullptr for no value)
+      TERN_(FASTER_GCODE_PARSER, set(param, valptr)); // Set parameter exists and pointer (nullptr for no value) param = 'M' ,valptr -> p 指向第一个数据的地址
     }
     else if (!string_arg) {                     // Not A-Z? First time, keep as the string_arg
       string_arg = p - 1;
