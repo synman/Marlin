@@ -106,7 +106,7 @@
 
   #ifndef ENDER_MACHINE_OVERRIDE
     #define FIRMWARE_VERSION  "2.1.x-PA"
-  #elif ENABLED(AUTO_BED_LEVELING_ABL)
+  #elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
     #define FIRMWARE_VERSION  "2.1.x-PA"
   #else
       #define FIRMWARE_VERSION  "2.1.x-PU"
@@ -115,7 +115,7 @@
   #define SCREEN_VERSION    "UI20" 
   #define SCREEN_HW_VERSION "DWIN2021"
   #define HARDWARE_VERSION  "CR-FDM-v24S1_301"
-  #define PRINT_SIZE        "220 * 220 * 270"
+  #define PRINT_SIZE        "235 * 225 * 270"
   #define CORP_WEBSITE_C    "www.cxsw3d.com  "
   #define CORP_WEBSITE_E    "www.creality.com"
 #endif
@@ -142,7 +142,7 @@
 
   #ifndef ENDER_MACHINE_OVERRIDE
     #define FIRMWARE_VERSION  "2.1.x-+A"
-  #elif ENABLED(AUTO_BED_LEVELING_ABL)
+  #elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
     #define FIRMWARE_VERSION  "2.1.x-+A"
   #else
       #define FIRMWARE_VERSION  "2.1.x-+U"
@@ -180,7 +180,7 @@
   #define SCREEN_VERSION    "UI20" 
   #define SCREEN_HW_VERSION "DWIN2021"
   #define HARDWARE_VERSION  "CR-FDM-v24S1_301"
-  #define PRINT_SIZE        "220 * 220 * 270"
+  #define PRINT_SIZE        "235 * 225 * 270"
   #define CORP_WEBSITE_C    "www.cxsw3d.com  "
   #define CORP_WEBSITE_E    "www.creality.com"
 #endif
@@ -1433,14 +1433,14 @@
 #if ENABLED(ENDER_3S1_PRO)
   // The size of the printable area
   #define X_BED_SIZE 235
-  #define Y_BED_SIZE 235
+  #define Y_BED_SIZE 225
 
   // Travel limits (mm) after homing, corresponding to endstop positions.
-  #define X_MIN_POS 0
-  #define Y_MIN_POS 0
+  #define X_MIN_POS -9
+  #define Y_MIN_POS -6
   #define Z_MIN_POS 0
-  #define X_MAX_POS X_BED_SIZE 
-  #define Y_MAX_POS Y_BED_SIZE 
+  #define X_MAX_POS X_BED_SIZE + X_MIN_POS + 5
+  #define Y_MAX_POS Y_BED_SIZE + Y_MIN_POS
   #define Z_MAX_POS 270
 #endif
 

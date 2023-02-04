@@ -92,9 +92,14 @@ void GcodeSuite::M851() {
 
   if (parser.seenval('Z')) {
     const float z = parser.value_float();
-    if (WITHIN(z, Z_PROBE_OFFSET_RANGE_MIN, Z_PROBE_OFFSET_RANGE_MAX))
+    if (WITHIN(z, Z_PROBE_OFFSET_RANGE_MIN, Z_PROBE_OFFSET_RANGE_MAX)) {
+      #if ENABLED(CREALITY_TOUCHSCREEN)
+        zprobe_zoffset = z;
+        rtscheck.RTS_SndData(zprobe_zoffset * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
+      #endif
+
       offs.z = z;
-    else {
+    } else {
       SERIAL_ECHOLNPAIR("?Z out of range (", Z_PROBE_OFFSET_RANGE_MIN, " to ", Z_PROBE_OFFSET_RANGE_MAX, ")");
       ok = false;
     }
