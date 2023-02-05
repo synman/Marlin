@@ -54,7 +54,7 @@
 #endif
 
 #if ENABLED(CREALITY_TOUCHSCREEN)
-  #include "../../../lcd/e3v2/creality/lcd_rts.h"
+  #include "../../../lcd/dwin/lcd_rts.h"
 #endif
 
 #include <math.h>
@@ -444,7 +444,7 @@ void unified_bed_leveling::G29() {
 
           #if ENABLED(CREALITY_TOUCHSCREEN)
             if (parser.seen_test('C') && touchscreen_requested_mesh == 1) {
-              queue.enqueue_one(F("G29 P3"));
+              queue.enqueue_one_now("G29 P3");
             }
           #endif
 
@@ -565,7 +565,7 @@ void unified_bed_leveling::G29() {
         #if ENABLED(CREALITY_TOUCHSCREEN)
           if (touchscreen_requested_mesh == 1) {
             touchscreen_requested_mesh = 0;
-            queue.enqueue_one(F("G29 S1"));
+            queue.enqueue_one_now("G29 S1");
           }
         #endif
 
@@ -808,7 +808,7 @@ void unified_bed_leveling::shift_mesh_height() {
 
     #if ENABLED(CREALITY_TOUCHSCREEN)
       if (touchscreen_requested_mesh == 1) {
-        queue.enqueue_one(F("G29 P1 C T"));
+        queue.enqueue_one_now("G29 P1 C T");
       }
 
       RTS_AutoBedLevelPage();
