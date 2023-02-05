@@ -83,9 +83,9 @@
    */
   #ifndef SHORT_BUILD_VERSION
     #if ENABLED(USER_STM32F103)
-      #define SHORT_BUILD_VERSION "2.1.x-F1" //F103版本
+      #define SHORT_BUILD_VERSION "2.1.2-F1" //F103版本
     #elif ENABLED(USER_STM32F401)
-      #define SHORT_BUILD_VERSION "2.1.x-F4" // F401版本
+      #define SHORT_BUILD_VERSION "2.1.2-F4" // F401版本
     #endif
   #endif
 
@@ -97,11 +97,11 @@
   #define MACHINE_TYPE      "Ender-3 S1 Pro"
 
   #ifndef ENDER_MACHINE_OVERRIDE
-    #define FIRMWARE_VERSION  "2.1.x-PA"
+    #define FIRMWARE_VERSION  "2.1.2-PA"
   #elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
-    #define FIRMWARE_VERSION  "2.1.x-PA"
+    #define FIRMWARE_VERSION  "2.1.2-PA"
   #else
-      #define FIRMWARE_VERSION  "2.1.x-PU"
+      #define FIRMWARE_VERSION  "2.1.2-PU"
   #endif
 
   #define SCREEN_VERSION    "UI20" 
@@ -119,9 +119,9 @@
    */
   #ifndef SHORT_BUILD_VERSION
     #if ENABLED(USER_STM32F103)
-      #define SHORT_BUILD_VERSION "2.1.x-F1" //F103版本
+      #define SHORT_BUILD_VERSION "2.1.2-F1" //F103版本
     #elif ENABLED(USER_STM32F401)
-      #define SHORT_BUILD_VERSION "2.1.x-F4" // F401版本
+      #define SHORT_BUILD_VERSION "2.1.2-F4" // F401版本
     #endif
   #endif
 
@@ -133,11 +133,11 @@
   #define MACHINE_TYPE      "Ender-3 S1 Plus"
 
   #ifndef ENDER_MACHINE_OVERRIDE
-    #define FIRMWARE_VERSION  "2.1.x-+A"
+    #define FIRMWARE_VERSION  "2.1.2-+A"
   #elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
-    #define FIRMWARE_VERSION  "2.1.x-+A"
+    #define FIRMWARE_VERSION  "2.1.2-+A"
   #else
-      #define FIRMWARE_VERSION  "2.1.x-+U"
+      #define FIRMWARE_VERSION  "2.1.2-+U"
   #endif
 
   #define SCREEN_VERSION    "UI20"
@@ -188,7 +188,7 @@
  * respectfully request that you retain the unmodified Marlin boot screen.
  */
 
-// Show the Marlin bootscreen on startup. ** ENABLE FOR PRODUCTION **
+/ Show the Marlin bootscreen on startup. ** ENABLE FOR PRODUCTION **
 // #define SHOW_BOOTSCREEN
 
 // Show the bitmap in Marlin/_Bootscreen.h on startup.
