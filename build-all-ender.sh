@@ -5,6 +5,7 @@ home="$(echo ~)"
 curdir="$(pwd)"
 branch="$(git rev-parse --abbrev-ref HEAD)"
 
+piohome="$curdir/.pio"
 buildhome="$curdir/.pio/build"
 
 declare -a branches=($branch)
@@ -22,11 +23,12 @@ do
     branch=$thebranch
     git checkout $branch
 
+    # delete our .pio directory (cleanall)
+    rm -rf $piohome
+    pio run -t cleanall
+
     #let things settle down
     sleep 15
-
-    # delete our build directory (cleanall)
-    rm -rf $buildhome
 
     # build our F1 chip variants
     for variant in "${f1_build_variants[@]}"
