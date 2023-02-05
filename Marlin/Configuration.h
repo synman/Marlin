@@ -660,20 +660,11 @@
     #define DEFAULT_Ki_LIST {   0.96,   1.08 }
     #define DEFAULT_Kd_LIST { 54.59, 114.00 }
   #else
-    // #define DEFAULT_Kp  22.20
-    // #define DEFAULT_Ki   1.08
-    // #define DEFAULT_Kd 114.00
-    //M303 C12 S200
-      /*Ender-3 max*/
-     // #define DEFAULT_Kp 10.42
-     // #define DEFAULT_Ki 0.5
-      //#define DEFAULT_Kd 53.18
-
-      #define DEFAULT_Kp 14.49
-      #define DEFAULT_Ki 0.96
-      #define DEFAULT_Kd 54.59
-   #endif
-#endif // PIDTEMP
+      #define DEFAULT_Kp 16.39
+      #define DEFAULT_Ki 1.56
+      #define DEFAULT_Kd 42.95
+  #endif
+#endif
 
 //===========================================================================
 //====================== PID > Bed Temperature Control ======================
@@ -708,15 +699,11 @@
   #define MIN_BED_POWER 0
   //#define PID_BED_DEBUG // Sends debug data to the serial port.
 
-  //120V 250W silicone heater into 4mm borosilicate (MendelMax 1.5+)
-  //from FOPDT model - kp=.39 Tp=405 Tdead=66, Tc set to 79.2, aggressive factor of .15 (vs .1, 1, 10)
-  //#define DEFAULT_bedKp 10.00
-  //#define DEFAULT_bedKi .023
-  //#define DEFAULT_bedKd 305.4
-  //M303 C12 E-1 S100   
-  #define DEFAULT_bedKp 54.86
-  #define DEFAULT_bedKi 10.06
-  #define DEFAULT_bedKd 199.38
+  // 120V 250W silicone heater into 4mm borosilicate (MendelMax 1.5+)
+  // from FOPDT model - kp=.39 Tp=405 Tdead=66, Tc set to 79.2, aggressive factor of .15 (vs .1, 1, 10)
+  #define DEFAULT_bedKp 82.84
+  #define DEFAULT_bedKi 16.18
+  #define DEFAULT_bedKd 282.78
 
   // FIND YOUR OWN: "M303 E-1 C8 S90" to run autotune on the bed at 90 degreesC for 8 cycles.
 #endif // PIDTEMPBED
@@ -1439,8 +1426,8 @@
   #define X_MIN_POS -9
   #define Y_MIN_POS -6
   #define Z_MIN_POS 0
-  #define X_MAX_POS X_BED_SIZE + X_MIN_POS + 5
-  #define Y_MAX_POS Y_BED_SIZE + Y_MIN_POS
+  #define X_MAX_POS X_BED_SIZE
+  #define Y_MAX_POS Y_BED_SIZE
   #define Z_MAX_POS 270
 #endif
 
@@ -1734,11 +1721,11 @@
 
   //#define MESH_EDIT_GFX_OVERLAY   // Display a graphics overlay while editing the mesh
 
-  #define MESH_INSET 1             // Set Mesh bounds as an inset region of the bed
-  #define MESH_INSET_X ((NOZZLE_TO_PROBE_OFFSET_X * -1) + MESH_INSET)
-  #define MESH_INSET_Y ((NOZZLE_TO_PROBE_OFFSET_Y * -1) + MESH_INSET)
+  #define MESH_INSET 0             // Set Mesh bounds as an inset region of the bed
+  #define MESH_INSET_X MESH_INSET - NOZZLE_TO_PROBE_OFFSET_X
+  #define MESH_INSET_Y MESH_INSET - NOZZLE_TO_PROBE_OFFSET_Y
 
-  #define GRID_MAX_POINTS_X 5      // Don't use more than 15 points per axis, implementation limited.
+  #define GRID_MAX_POINTS_X 10      // Don't use more than 15 points per axis, implementation limited.
   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
 
   #define UBL_HILBERT_CURVE       // Use Hilbert distribution for less travel when probing multiple points

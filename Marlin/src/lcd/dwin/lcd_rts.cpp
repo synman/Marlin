@@ -86,6 +86,8 @@ bool StartPrint_flag = false;
 
 int power_off_type_yes = 0;
 
+int touchscreen_requested_mesh = 0;
+
 //运动相关参数设置
 const float manual_feedrate_mm_m[] = {50 * 60, 50 * 60, 4 * 60, 60};
 // const float manual_feedrate_mm_m[] = DEFAULT_MAX_FEEDRATE;
@@ -422,6 +424,7 @@ void RTSSHOW::RTS_Init(void)
     // }
   #endif
   last_zoffset = zprobe_zoffset = probe.offset.z;
+  touchscreen_requested_mesh = 0;
   RTS_SndData(zprobe_zoffset * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
 
   //显示语言选择界面图标
@@ -991,9 +994,10 @@ void RTSSHOW::RTS_HandleData(void)
         #if ENABLED(AUTO_BED_LEVELING_BILINEAR) 
           queue.enqueue_one_P(PSTR("G29"));
         #else
+          touchscreen_requested_mesh = 1;
           queue.enqueue_one_P(PSTR("G29 P1 T"));
-          queue.enqueue_one_P(PSTR("G29 P3"));
-          queue.enqueue_one_P(PSTR("G29 S1"));
+          // queue.enqueue_one_P(PSTR("G29 P3"));
+          // queue.enqueue_one_P(PSTR("G29 S1"));
         #endif
 
         //queue.enqueue_one_P(PSTR("G28\nG29"));

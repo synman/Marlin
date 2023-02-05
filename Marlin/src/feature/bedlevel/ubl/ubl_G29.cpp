@@ -53,6 +53,10 @@
   #include "../hilbert_curve.h"
 #endif
 
+#if ENABLED(CREALITY_TOUCHSCREEN)
+  #include "../../../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 #include <math.h>
 
 #define UBL_G29_P31
@@ -437,6 +441,13 @@ void unified_bed_leveling::G29() {
 
           report_current_position();
           probe_deployed = true;
+
+          #if ENABLED(CREALITY_TOUCHSCREEN)
+            if (parser.seen_test('C') && touchscreen_requested_mesh == 1) {
+              queue.enqueue_one(F("G29 P3"));
+            }
+          #endif
+
         } break;
 
       #endif // HAS_BED_PROBE
@@ -550,6 +561,14 @@ void unified_bed_leveling::G29() {
               break;
           }
         }
+
+        #if ENABLED(CREALITY_TOUCHSCREEN)
+          if (touchscreen_requested_mesh == 1) {
+            touchscreen_requested_mesh = 0;
+            queue.enqueue_one(F("G29 S1"));
+          }
+        #endif
+
         break;
       }
 
@@ -768,6 +787,16 @@ void unified_bed_leveling::shift_mesh_height() {
       }
       SERIAL_FLUSH(); // Prevent host M105 buffer overrun.
 
+    #if ENABLED(CREALITY_TOUCHSCREEN)
+      if (best.pos.x >= 0) {
+          const uint16_t percent = 100 / GRID_MAX_POINTS * (GRID_MAX_POINTS - (count - 1));
+          rtscheck.RTS_SndData((uint16_t) (percent / 2) , AUTO_BED_LEVEL_TITLE_VP);
+          rtscheck.RTS_SndData(percent, AUTO_LEVELING_PERCENT_DATA_VP);
+          rtscheck.RTS_SndData(ExchangePageBase + 26, ExchangepageAddr);
+          change_page_font = 26;
+      }
+    #endif
+
     } while (best.pos.x >= 0 && --count);
 
     TERN_(EXTENSIBLE_UI, ExtUI::onMeshUpdate(best.pos, ExtUI::G29_FINISH));
@@ -776,6 +805,14 @@ void unified_bed_leveling::shift_mesh_height() {
     TERN_(HAS_LCD_MENU, ui.release());
     probe.stow();
     TERN_(HAS_LCD_MENU, ui.capture());
+
+    #if ENABLED(CREALITY_TOUCHSCREEN)
+      if (touchscreen_requested_mesh == 1) {
+        queue.enqueue_one(F("G29 P1 C T"));
+      }
+
+      RTS_AutoBedLevelPage();
+    #endif
 
     probe.move_z_after_probing();
 

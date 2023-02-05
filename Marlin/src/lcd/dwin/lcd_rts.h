@@ -584,6 +584,7 @@ extern void RTSInit(void);
   extern void RTSUpdateLaser(void);
 #endif
 
+extern int touchscreen_requested_mesh;
 extern float zprobe_zoffset;
 extern char waitway;
 extern int change_page_font;
