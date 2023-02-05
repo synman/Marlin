@@ -90,26 +90,26 @@
    */
   #ifndef SHORT_BUILD_VERSION
     #if ENABLED(USER_STM32F103)
-      #define SHORT_BUILD_VERSION "2.1.x-F1" //F103版本
+      #define SHORT_BUILD_VERSION "2.0.8-F1" //F103版本
     #elif ENABLED(USER_STM32F401)
-      #define SHORT_BUILD_VERSION "2.1.x-F4" // F401版本
+      #define SHORT_BUILD_VERSION "2.0.8-F4" // F401版本
     #endif
     
   #endif
 
   // Author info of this build printed to the host during boot and M115
-  #define STRING_CONFIG_H_AUTHOR "Creality / SMS" // Who made the changes.
+  #define STRING_CONFIG_H_AUTHOR "Synman" // Who made the changes.
   //#define CUSTOM_VERSION_FILE Version.h // Path from the root directory (no quotes)
   #define MACVERSION        STRING_CONFIG_H_AUTHOR
   #define SOFTVERSION       SHORT_BUILD_VERSION
   #define MACHINE_TYPE      "Ender-3 S1 Pro"
 
   #ifndef ENDER_MACHINE_OVERRIDE
-    #define FIRMWARE_VERSION  "2.1.x-PA"
+    #define FIRMWARE_VERSION  "2.0.8-PA"
   #elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
-    #define FIRMWARE_VERSION  "2.1.x-PA"
+    #define FIRMWARE_VERSION  "2.0.8-PA"
   #else
-      #define FIRMWARE_VERSION  "2.1.x-PU"
+      #define FIRMWARE_VERSION  "2.0.8-PU"
   #endif
 
   #define SCREEN_VERSION    "UI20" 
