@@ -3,11 +3,12 @@ set -e -o pipefail
 
 home="$(echo ~)"
 curdir="$(pwd)"
-branch="$(git rev-parse --abbrev-ref HEAD)"
+origbranch="$(git rev-parse --abbrev-ref HEAD)"
 
+piohome="$curdir/.pio"
 buildhome="$curdir/.pio/build"
 
-declare -a branches=($branch)
+declare -a branches=($origbranch)
 
 if [ "$1" = "--all_branches" ]
 then
@@ -17,16 +18,16 @@ fi
 declare -a f1_build_variants=(STM32F103RE_creality_s1pro_abl STM32F103RE_creality_s1pro_ubl STM32F103RE_creality_s1plus_abl STM32F103RE_creality_s1plus_ubl)
 declare -a f4_build_variants=(STM32F401RC_creality_s1pro_abl STM32F401RC_creality_s1pro_ubl STM32F401RC_creality_s1plus_abl STM32F401RC_creality_s1plus_ubl)
 
-for thebranch in "${branches[@]}"
+for branch in "${branches[@]}"
 do
-    branch=$thebranch
     git checkout $branch
+
+    # delete our .pio directory and cleanall
+    rm -rf $piohome
+    pio run -t cleanall
 
     #let things settle down
     sleep 15
-
-    # delete our build directory (cleanall)
-    rm -rf $buildhome
 
     # build our F1 chip variants
     for variant in "${f1_build_variants[@]}"
@@ -71,6 +72,9 @@ do
 
     cd $curdir
 done
+
+# reset our branch if it changed
+git checkout $origbranch
 
 echo " "
 echo "Build Completed Successfully\!"
