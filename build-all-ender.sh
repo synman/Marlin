@@ -76,6 +76,10 @@ done
 # reset our branch if it changed
 git checkout $origbranch
 
+# delete our .pio directory and cleanall
+rm -rf $piohome
+pio run -t cleanall
+
 echo " "
 echo "Build Completed Successfully\!"
 echo " "
