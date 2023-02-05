@@ -44,3 +44,6 @@ done
 
 cd $curdir
 
+echo 
+echo Build Completed Successfully!
+echo 
