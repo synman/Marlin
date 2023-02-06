@@ -60,9 +60,7 @@
 // @section info
 
 //  #define ENDER_3S1_PLUS
-#ifndef ENDER_MACHINE_OVERRIDE
-  #define ENDER_3S1_PRO
-#endif
+#define ENDER_3S1_PRO
   
 // 主控芯片
 #ifdef MCU_STM32F401RC
@@ -77,31 +75,23 @@
    */
   #ifndef SHORT_BUILD_VERSION
     #if ENABLED(USER_STM32F103)
-      #define SHORT_BUILD_VERSION "2.1.x-F1" //F103版本
+      #define SHORT_BUILD_VERSION "2.1.2.24F1-SMS" //F103版本
     #elif ENABLED(USER_STM32F401)
-      #define SHORT_BUILD_VERSION "2.1.x-F4" // F401版本
+      #define SHORT_BUILD_VERSION "2.1.2.24F4-SMS" // F401版本
     #endif
   #endif
 
   // Author info of this build printed to the host during boot and M115
-  #define STRING_CONFIG_H_AUTHOR "Synman" // Who made the changes.
+  #define STRING_CONFIG_H_AUTHOR "Synman (Thomas Toka edit)" // Who made the changes.
   //#define CUSTOM_VERSION_FILE Version.h // Path from the root directory (no quotes)
   #define MACVERSION        STRING_CONFIG_H_AUTHOR
   #define SOFTVERSION       SHORT_BUILD_VERSION
   #define MACHINE_TYPE      "Ender-3 S1 Pro"
-
-  #ifndef ENDER_MACHINE_OVERRIDE
-    #define FIRMWARE_VERSION  "2.1.x-PA"
-  #elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
-    #define FIRMWARE_VERSION  "2.1.x-PA"
-  #else
-      #define FIRMWARE_VERSION  "2.1.x-PU"
-  #endif
-
+  #define FIRMWARE_VERSION  "2.1.2"
   #define SCREEN_VERSION    "UI20" 
   #define SCREEN_HW_VERSION "DWIN2021"
   #define HARDWARE_VERSION  "CR-FDM-v24S1_301"
-  #define PRINT_SIZE        "235 * 225 * 270"
+  #define PRINT_SIZE        "235 * 235 * 250"
   #define CORP_WEBSITE_C    "www.cxsw3d.com  "
   #define CORP_WEBSITE_E    "marlinfw.org"
 #endif
@@ -113,27 +103,19 @@
    */
   #ifndef SHORT_BUILD_VERSION
     #if ENABLED(USER_STM32F103)
-      #define SHORT_BUILD_VERSION "2.1.x-F1" //F103版本
+      #define SHORT_BUILD_VERSION "2.1.2.24F1-SMS" //F103版本
     #elif ENABLED(USER_STM32F401)
-      #define SHORT_BUILD_VERSION "2.1.x-F4" // F401版本
+      #define SHORT_BUILD_VERSION "2.1.2.24F4-SMS" // F401版本
     #endif
   #endif
 
   // Author info of this build printed to the host during boot and M115
-  #define STRING_CONFIG_H_AUTHOR "Synman" // Who made the changes.
+  #define STRING_CONFIG_H_AUTHOR "Synman (Thomas Toka edit)" // Who made the changes.
   //#define CUSTOM_VERSION_FILE Version.h // Path from the root directory (no quotes)
   #define MACVERSION        STRING_CONFIG_H_AUTHOR
   #define SOFTVERSION       SHORT_BUILD_VERSION
   #define MACHINE_TYPE      "Ender-3 S1 Plus"
-
-  #ifndef ENDER_MACHINE_OVERRIDE
-    #define FIRMWARE_VERSION  "2.1.x-+A"
-  #elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
-    #define FIRMWARE_VERSION  "2.1.x-+A"
-  #else
-      #define FIRMWARE_VERSION  "2.1.x-+U"
-  #endif
-
+  #define FIRMWARE_VERSION  "2.1.2"
   #define SCREEN_VERSION    "UI20"
   #define SCREEN_HW_VERSION "DWIN2021"
   #define HARDWARE_VERSION  "CR-FDM-v24S1_301"
@@ -157,7 +139,7 @@
   #endif
 
   // Author info of this build printed to the host during boot and M115
-  #define STRING_CONFIG_H_AUTHOR "Synman" // Who made the changes.
+  #define STRING_CONFIG_H_AUTHOR "Synman (Thomas Toka edit)" // Who made the changes.
   //#define CUSTOM_VERSION_FILE Version.h // Path from the root directory (no quotes)
   #define MACVERSION        STRING_CONFIG_H_AUTHOR
   #define SOFTVERSION       SHORT_BUILD_VERSION
@@ -166,7 +148,7 @@
   #define SCREEN_VERSION    "UI20" 
   #define SCREEN_HW_VERSION "DWIN2021"
   #define HARDWARE_VERSION  "CR-FDM-v24S1_301"
-  #define PRINT_SIZE        "235 * 225 * 270"
+  #define PRINT_SIZE        "220 * 220 * 270"
   #define CORP_WEBSITE_C    "www.cxsw3d.com  "
   #define CORP_WEBSITE_E    "marlinfw.org"
 #endif
@@ -225,7 +207,7 @@
  */
 #define BAUDRATE 115200
 
-//#define BAUD_RATE_GCODE     // Enable G-code M575 to set the baud rate
+#define BAUD_RATE_GCODE     // Enable G-code M575 to set the baud rate
 
 /**
  * Serial Port Baud Rate
@@ -786,9 +768,9 @@
     #define DEFAULT_Ki_LIST {   1.08,   1.08 }
     #define DEFAULT_Kd_LIST { 114.00, 114.00 }
   #else
-      #define DEFAULT_Kp 16.39
-      #define DEFAULT_Ki 1.56
-      #define DEFAULT_Kd 42.95
+      #define DEFAULT_Kp 19.10
+      #define DEFAULT_Ki 1.73
+      #define DEFAULT_Kd 52.71
   #endif
 #endif
 
@@ -871,12 +853,9 @@
 
   // 120V 250W silicone heater into 4mm borosilicate (MendelMax 1.5+)
   // from FOPDT model - kp=.39 Tp=405 Tdead=66, Tc set to 79.2, aggressive factor of .15 (vs .1, 1, 10)
-  // #define DEFAULT_bedKp 54.86
-  // #define DEFAULT_bedKi 10.06
-  // #define DEFAULT_bedKd 199.38
-  #define DEFAULT_bedKp 82.84
-  #define DEFAULT_bedKi 16.18
-  #define DEFAULT_bedKd 282.78
+  #define DEFAULT_bedKp 129.55
+  #define DEFAULT_bedKi 23.47
+  #define DEFAULT_bedKd 476.73
 
   // FIND YOUR OWN: "M303 E-1 C8 S90" to run autotune on the bed at 90 degreesC for 8 cycles.
 #endif // PIDTEMPBED
@@ -1394,8 +1373,8 @@
  */
 #define CLASSIC_JERK   //转弯时最小速度变化（抖动）
 #if ENABLED(CLASSIC_JERK)
-  #define DEFAULT_XJERK 5.0
-  #define DEFAULT_YJERK 5.0
+  #define DEFAULT_XJERK 10.0
+  #define DEFAULT_YJERK 10.0
   #define DEFAULT_ZJERK  0.3
   //#define DEFAULT_IJERK  0.3
   //#define DEFAULT_JJERK  0.3
@@ -1408,7 +1387,7 @@
 
   //#define LIMITED_JERK_EDITING        // Limit edit via M205 or LCD to DEFAULT_aJERK * 2
   #if ENABLED(LIMITED_JERK_EDITING)
-    #define MAX_JERK_EDIT_VALUES { 20, 20, 0.6, 10 } // ...or, set your own edit limits
+    #define MAX_JERK_EDIT_VALUES { 20, 20, 1, 20 } // ...or, set your own edit limits
   #endif
 #endif
 
@@ -1660,25 +1639,22 @@
  *     |    [-]    |
  *     O-- FRONT --+
  */
-
-#define NOZZLE_TO_PROBE_OFFSET_X -31.5
-#define NOZZLE_TO_PROBE_OFFSET_Y -41.8
-#define NOZZLE_TO_PROBE_OFFSET { NOZZLE_TO_PROBE_OFFSET_X, NOZZLE_TO_PROBE_OFFSET_Y, 0 }
+#define NOZZLE_TO_PROBE_OFFSET { -31.5, -41.8, 0.00 }
 
 // Most probes should stay away from the edges of the bed, but
 // with NOZZLE_AS_PROBE this can be negative for a wider probing area.
-// #define PROBING_MARGIN 5
+#define PROBING_MARGIN 40
 
 // X and Y axis travel speed (mm/min) between probes
 // #define XY_PROBE_FEEDRATE (133*60)
 #if ENABLED(ENDER_3S1_PLUS)
   #define XY_PROBE_FEEDRATE (50*60) 
 #else
-  #define XY_PROBE_FEEDRATE (200*60)
+  #define XY_PROBE_FEEDRATE (400*60)
 #endif
 
 // Feedrate (mm/min) for the first approach when double-probing (MULTIPLE_PROBING == 2)
-#define Z_PROBE_FEEDRATE_FAST (8*60)
+#define Z_PROBE_FEEDRATE_FAST (16*60)
 
 // Feedrate (mm/min) for the "accurate" probe of each point
 #define Z_PROBE_FEEDRATE_SLOW (Z_PROBE_FEEDRATE_FAST / 2)
@@ -1728,7 +1704,7 @@
  * A total of 2 does fast/slow probes with a weighted average.
  * A total of 3 or more adds more slow probes, taking the average.
  */
-#define MULTIPLE_PROBING 3
+#define MULTIPLE_PROBING 2
 #define EXTRA_PROBING    1
 
 /**
@@ -1748,13 +1724,13 @@
 #define Z_CLEARANCE_DEPLOY_PROBE   10 // Z Clearance for Deploy/Stow
 #define Z_CLEARANCE_BETWEEN_PROBES  5 // Z Clearance between probe points
 #define Z_CLEARANCE_MULTI_PROBE     5 // Z Clearance between multiple probes
-#define Z_AFTER_PROBING            10 // Z position after probing is done
+//#define Z_AFTER_PROBING           5 // Z position after probing is done
 
-#define Z_PROBE_LOW_POINT          -2 // Farthest distance below the trigger-point to go before stopping
+#define Z_PROBE_LOW_POINT          -5 // Farthest distance below the trigger-point to go before stopping
 
 // For M851 give a range for adjusting the Z probe offset
-#define Z_PROBE_OFFSET_RANGE_MIN -10   
-#define Z_PROBE_OFFSET_RANGE_MAX 10
+#define Z_PROBE_OFFSET_RANGE_MIN -5 // -10   20210713_rock
+#define Z_PROBE_OFFSET_RANGE_MAX 20
 
 // Enable the M48 repeatability test to test probe accuracy
 #define Z_MIN_PROBE_REPEATABILITY_TEST
@@ -1862,7 +1838,7 @@
 #define Z_HOMING_HEIGHT  5      // (mm) Minimal Z height before homing (G28) for Z clearance above the bed, clamps, ...
                                   // Be sure to have this much clearance over your Z_MAX_POS to prevent grinding.
 
-#define Z_AFTER_HOMING  10      // (mm) Height to move to after homing Z
+#define Z_AFTER_HOMING  5      // (mm) Height to move to after homing Z
 
 // Direction of endstops when homing; 1=MAX, -1=MIN
 // :[-1,1]
@@ -1881,15 +1857,15 @@
 #if ENABLED(ENDER_3S1_PRO)
   // The size of the printable area
   #define X_BED_SIZE 235
-  #define Y_BED_SIZE 225
+  #define Y_BED_SIZE 235
 
   // Travel limits (mm) after homing, corresponding to endstop positions.
-  #define X_MIN_POS -9
-  #define Y_MIN_POS -6
+  #define X_MIN_POS -0.8
+  #define Y_MIN_POS -2
   #define Z_MIN_POS 0
   #define X_MAX_POS X_BED_SIZE
   #define Y_MAX_POS Y_BED_SIZE
-  #define Z_MAX_POS 270
+  #define Z_MAX_POS 250
 #endif
 
 #if ENABLED(ENDER_3S1_PLUS)
@@ -2076,10 +2052,8 @@
  */
 //#define AUTO_BED_LEVELING_3POINT
 //#define AUTO_BED_LEVELING_LINEAR
-#ifndef ENDER_MACHINE_OVERRIDE
-  #define AUTO_BED_LEVELING_BILINEAR
-#endif
-// #define AUTO_BED_LEVELING_UBL
+#define AUTO_BED_LEVELING_BILINEAR
+//#define AUTO_BED_LEVELING_UBL
 //#define MESH_BED_LEVELING
 
 /**
@@ -2103,7 +2077,7 @@
 /**
  * Auto-leveling needs preheating
  */
-#define PREHEAT_BEFORE_LEVELING
+//#define PREHEAT_BEFORE_LEVELING
 #if ENABLED(PREHEAT_BEFORE_LEVELING)
   #define LEVELING_NOZZLE_TEMP  70   // (°C) Only applies to E0 at this time
   #define LEVELING_BED_TEMP     70
@@ -2156,7 +2130,7 @@
   #if ENABLED(G26_MESH_VALIDATION)
     #define MESH_TEST_NOZZLE_SIZE    0.4  // (mm) Diameter of primary nozzle.
     #define MESH_TEST_LAYER_HEIGHT   0.2  // (mm) Default layer height for G26.
-    #define MESH_TEST_HOTEND_TEMP  205    // (°C) Default nozzle temperature for G26.
+    #define MESH_TEST_HOTEND_TEMP  210    // (°C) Default nozzle temperature for G26.
     #define MESH_TEST_BED_TEMP      60    // (°C) Default bed temperature for G26.
     #define G26_XY_FEEDRATE         20    // (mm/s) Feedrate for G26 XY moves.
     #define G26_XY_FEEDRATE_TRAVEL 100    // (mm/s) Feedrate for G26 XY travel moves.
@@ -2184,7 +2158,7 @@
     // Subdivision of the grid by Catmull-Rom method.
     // Synthesizes intermediate points to produce a more detailed mesh.
     //
-    #define ABL_BILINEAR_SUBDIVISION
+    //#define ABL_BILINEAR_SUBDIVISION
     #if ENABLED(ABL_BILINEAR_SUBDIVISION)
       // Number of subdivisions between probe points
       #define BILINEAR_SUBDIVISIONS 5
@@ -2200,14 +2174,11 @@
 
   //#define MESH_EDIT_GFX_OVERLAY   // Display a graphics overlay while editing the mesh
 
-  #define MESH_INSET 0             // Set Mesh bounds as an inset region of the bed
-  #define MESH_INSET_X MESH_INSET - NOZZLE_TO_PROBE_OFFSET_X
-  #define MESH_INSET_Y MESH_INSET - NOZZLE_TO_PROBE_OFFSET_Y
-
+  #define MESH_INSET 1              // Set Mesh bounds as an inset region of the bed
   #define GRID_MAX_POINTS_X 10      // Don't use more than 15 points per axis, implementation limited.
   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
 
-  #define UBL_HILBERT_CURVE       // Use Hilbert distribution for less travel when probing multiple points
+  //#define UBL_HILBERT_CURVE       // Use Hilbert distribution for less travel when probing multiple points
 
   #define UBL_MESH_EDIT_MOVES_Z     // Sophisticated users prefer no movement of nozzle
   #define UBL_SAVE_ACTIVE_ON_M500   // Save the currently active mesh in the current slot on M500
@@ -2224,7 +2195,7 @@
   //===========================================================================
 
   #define MESH_INSET 10          // Set Mesh bounds as an inset region of the bed
-  #define GRID_MAX_POINTS_X 3    // Don't use more than 7 points per axis, implementation limited.
+  #define GRID_MAX_POINTS_X 5    // Don't use more than 7 points per axis, implementation limited.
   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
 
   //#define MESH_G28_REST_ORIGIN // After homing all axes ('G28' or 'G28 XYZ') rest Z at Z_MIN_POS
@@ -2238,8 +2209,8 @@
 //#define LCD_BED_LEVELING
 
 #if ENABLED(LCD_BED_LEVELING)
-  #define MESH_EDIT_Z_STEP  0.025 // (mm) Step size while manually probing Z axis.
-  #define LCD_PROBE_Z_RANGE 4     // (mm) Z Range centered on Z_MIN_POS for LCD Z adjustment
+  #define MESH_EDIT_Z_STEP  0.1 // (mm) Step size while manually probing Z axis.
+  #define LCD_PROBE_Z_RANGE 10     // (mm) Z Range centered on Z_MIN_POS for LCD Z adjustment
   //#define MESH_EDIT_MENU        // Add a menu to edit mesh points
 #endif
 
@@ -2450,17 +2421,27 @@
   #define PREHEAT_2_TEMP_CHAMBER 35
   #define PREHEAT_2_FAN_SPEED    255 // Value from 0 to 255
 #else
-  #define PREHEAT_1_LABEL       "PLA"
-  #define PREHEAT_1_TEMP_HOTEND 200
-  #define PREHEAT_1_TEMP_BED     60
-  #define PREHEAT_1_TEMP_CHAMBER 35
-  #define PREHEAT_1_FAN_SPEED    255 // Value from 0 to 255
+#define PREHEAT_1_LABEL       "PLA"
+#define PREHEAT_1_TEMP_HOTEND 210
+#define PREHEAT_1_TEMP_BED     60
+#define PREHEAT_1_TEMP_CHAMBER 35
+#define PREHEAT_1_FAN_SPEED     255 // Value from 0 to 255
 
-  #define PREHEAT_2_LABEL       "ABS"
-  #define PREHEAT_2_TEMP_HOTEND 240
-  #define PREHEAT_2_TEMP_BED    110
-  #define PREHEAT_2_TEMP_CHAMBER 35
-  #define PREHEAT_2_FAN_SPEED    255 // Value from 0 to 255
+#define PREHEAT_2_LABEL       "ABS"
+#define PREHEAT_2_TEMP_HOTEND 240
+#define PREHEAT_2_TEMP_BED    100
+#define PREHEAT_2_TEMP_CHAMBER 35
+#define PREHEAT_2_FAN_SPEED   255 // Value from 0 to 255
+
+#define PREHEAT_3_LABEL       "PETG"
+#define PREHEAT_3_TEMP_HOTEND 230
+#define PREHEAT_3_TEMP_BED     80
+#define PREHEAT_3_FAN_SPEED   128
+
+#define PREHEAT_4_LABEL       "CUSTOM"
+#define PREHEAT_4_TEMP_HOTEND 190
+#define PREHEAT_4_TEMP_BED     50
+#define PREHEAT_4_FAN_SPEED   128
 #endif
 
 // @section motion
@@ -2658,7 +2639,7 @@
  *
  * :{ 'en':'English', 'an':'Aragonese', 'bg':'Bulgarian', 'ca':'Catalan', 'cz':'Czech', 'da':'Danish', 'de':'German', 'el':'Greek (Greece)', 'el_CY':'Greek (Cyprus)', 'es':'Spanish', 'eu':'Basque-Euskera', 'fi':'Finnish', 'fr':'French', 'gl':'Galician', 'hr':'Croatian', 'hu':'Hungarian', 'it':'Italian', 'jp_kana':'Japanese', 'ko_KR':'Korean (South Korea)', 'nl':'Dutch', 'pl':'Polish', 'pt':'Portuguese', 'pt_br':'Portuguese (Brazilian)', 'ro':'Romanian', 'ru':'Russian', 'sk':'Slovak', 'sv':'Swedish', 'tr':'Turkish', 'uk':'Ukrainian', 'vi':'Vietnamese', 'zh_CN':'Chinese (Simplified)', 'zh_TW':'Chinese (Traditional)' }
  */
-#define LCD_LANGUAGE en
+#define LCD_LANGUAGE de
 
 /**
  * LCD Character Set
@@ -2682,7 +2663,7 @@
  *
  * :['JAPANESE', 'WESTERN', 'CYRILLIC']
  */
-#define DISPLAY_CHARSET_HD44780 JAPANESE
+#define DISPLAY_CHARSET_HD44780 WESTERN
 
 /**
  * Info Screen Style (0:Classic, 1:Průša)
