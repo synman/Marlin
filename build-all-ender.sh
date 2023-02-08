@@ -15,8 +15,8 @@ then
     declare -a branches=(bugfix-2.1.x 2.1.2-ender-3-s1 2.0.8-ender-3-s1)
 fi
 
-declare -a f1_build_variants=(STM32F103RE_creality_s1pro_abl STM32F103RE_creality_s1pro_ubl STM32F103RE_creality_s1plus_abl STM32F103RE_creality_s1plus_ubl)
-declare -a f4_build_variants=(STM32F401RC_creality_s1pro_abl STM32F401RC_creality_s1pro_ubl STM32F401RC_creality_s1plus_abl STM32F401RC_creality_s1plus_ubl)
+declare -a f1_build_variants=(STM32F103RE_creality_s1pro_abl STM32F103RE_creality_s1pro_ubl25 STM32F103RE_creality_s1pro_ubl100 STM32F103RE_creality_s1plus_abl STM32F103RE_creality_s1plus_ubl25 STM32F103RE_creality_s1plus_ubl100)
+declare -a f4_build_variants=(STM32F401RC_creality_s1pro_abl STM32F401RC_creality_s1pro_ubl25 STM32F401RC_creality_s1pro_ubl100 STM32F401RC_creality_s1plus_abl STM32F401RC_creality_s1plus_ubl25 STM32F401RC_creality_s1plus_ubl100)
 
 for branch in "${branches[@]}"
 do
@@ -81,5 +81,5 @@ rm -rf $piohome
 pio run -t cleanall
 
 echo " "
-echo "Build Completed Successfully\!"
+echo "Build Completed Successfully!"
 echo " "
