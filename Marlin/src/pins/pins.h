@@ -555,7 +555,7 @@
 #elif MB(CREALITY_V453)
   #include "stm32f1/pins_CREALITY_V453.h"       // STM32F1                                env:STM32F103RET6_creality
 #elif MB(CREALITY_S1)
-  #include "stm32f1/pins_CREALITY_S1.h"         // STM32F1                                env:STM32F103RET6_creality env:STM32F103RE_creality_s1pro_abl env:STM32F103RE_creality_s1pro_ubl env:STM32F103RE_creality_s1plus_abl env:STM32F103RE_creality_s1plus_ubl
+  #include "stm32f1/pins_CREALITY_S1.h"         // STM32F1                                env:STM32F103RET6_creality env:STM32F103RE_creality_s1pro_abl env:STM32F103RE_creality_s1pro_ubl25 env:STM32F103RE_creality_s1plus_abl env:STM32F103RE_creality_s1plus_ubl25 env:STM32F103RE_creality_s1plus_ubl100 env:STM32F103RE_creality_s1pro_ubl100
 #elif MB(TRIGORILLA_PRO)
   #include "stm32f1/pins_TRIGORILLA_PRO.h"      // STM32F1                                env:trigorilla_pro
 #elif MB(FLY_MINI)
@@ -567,7 +567,7 @@
 #elif MB(MINGDA_MPX_ARM_MINI)
   #include "stm32f1/pins_MINGDA_MPX_ARM_MINI.h" // STM32F1                                env:STM32F103RE
 #elif MB(CREALITY_S1_F401RC)
-  #include "stm32f4/pins_CREALITY_S1_F401RC.h"  // STM32F4                                env:STM32F401RC_creality env:STM32F401RC_creality_s1pro_abl env:STM32F401RC_creality_s1pro_ubl env:STM32F401RC_creality_s1plus_abl env:STM32F401RC_creality_s1plus_ubl
+  #include "stm32f4/pins_CREALITY_S1_F401RC.h"  // STM32F4                                env:STM32F401RC_creality env:STM32F401RC_creality_s1pro_abl env:STM32F401RC_creality_s1pro_ubl25 env:STM32F401RC_creality_s1plus_abl env:STM32F401RC_creality_s1plus_ubl25 env:STM32F401RC_creality_s1plus_ubl100 env:STM32F401RC_creality_s1pro_ubl100
 
 //
 // ARM Cortex-M4F

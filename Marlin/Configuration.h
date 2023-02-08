@@ -1689,7 +1689,7 @@
 #if EITHER(AUTO_BED_LEVELING_LINEAR, AUTO_BED_LEVELING_BILINEAR)
 
   // Set the number of grid points per dimension.
-  #define GRID_MAX_POINTS_X 5
+  #define GRID_MAX_POINTS_X 5      // Don't use more than 15 points per axis, implementation limited.
   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
 
   // Probe along the Y axis, advancing X after each column
@@ -1725,7 +1725,9 @@
   #define MESH_INSET_X MESH_INSET - NOZZLE_TO_PROBE_OFFSET_X
   #define MESH_INSET_Y MESH_INSET - NOZZLE_TO_PROBE_OFFSET_Y
 
-  #define GRID_MAX_POINTS_X 10      // Don't use more than 15 points per axis, implementation limited.
+  #ifndef GRID_MAX_POINTS_X
+     #define GRID_MAX_POINTS_X 5      // Don't use more than 15 points per axis, implementation limited.
+  #endif
   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
 
   #define UBL_HILBERT_CURVE       // Use Hilbert distribution for less travel when probing multiple points
