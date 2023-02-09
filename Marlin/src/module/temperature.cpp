@@ -1597,6 +1597,8 @@ void Temperature::mintemp_error(const heater_id_t heater_id) {
               rtscheck.RTS_SndData(ExchangePageBase + 31, ExchangepageAddr);
               change_page_font = 31;
             #endif
+          
+          SERIAL_ECHOLNPGM("HOTEND MAXTEMP E:", e, " T:", degHotend(e), " MAX:", temp_range[e].maxtemp);
 
           maxtemp_error((heater_id_t)e);
         }
@@ -2482,8 +2484,10 @@ void Temperature::updateTemperaturesFromRawValues() {
     HOTEND_LOOP() {
       const raw_adc_t r = temp_hotend[e].getraw();
       const bool neg = temp_dir[e] < 0, pos = temp_dir[e] > 0;
-      if ((neg && r < temp_range[e].raw_max) || (pos && r > temp_range[e].raw_max))
+      if ((neg && r < temp_range[e].raw_max) || (pos && r > temp_range[e].raw_max)) {
+        SERIAL_ECHOLNPGM("HOTEND RAW MAXTEMP E:", e, " T:", r, " MAX:", temp_range[e].raw_max);
         maxtemp_error((heater_id_t)e);
+      }
 
       /**
       // DEBUG PREHEATING TIME
