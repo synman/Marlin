@@ -1375,16 +1375,14 @@ void RTSSHOW::RTS_HandleData(void)
         } else {
           zprobe_zoffset = last_zoffset - .01;
           neg = true;
-      }
+        }
+  
         if(WITHIN((zprobe_zoffset), Z_PROBE_OFFSET_RANGE_MIN, Z_PROBE_OFFSET_RANGE_MAX)) {
-          SERIAL_ECHOPGM("ZoffsetEnterKey offset [");
-          SERIAL_ECHO(zprobe_zoffset);
-          SERIAL_ECHOPGM("] last [" );
-          SERIAL_ECHO(last_zoffset);
-          SERIAL_ECHOPGM("] sent [");
-          SERIAL_ECHO(zprobe_zoffset - last_zoffset);
-          SERIAL_ECHOLNPGM("]");
-          babystep.add_mm(Z_AXIS, zprobe_zoffset - last_zoffset);
+          if (neg) {
+            queue.enqueue_now_P(PSTR("M290 Z-0.01"));
+          } else {
+            queue.enqueue_now_P(PSTR("M290 Z+0.01"));
+          }
         } else {
           zprobe_zoffset = last_zoffset;
         }
