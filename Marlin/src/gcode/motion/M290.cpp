@@ -47,6 +47,11 @@
     if (TERN1(BABYSTEP_HOTEND_Z_OFFSET, active_extruder == 0)) {
       probe.offset.z += offs;
       SERIAL_ECHO_MSG(STR_PROBE_OFFSET " " STR_Z, probe.offset.z);
+
+      #if ENABLED(CREALITY_TOUCHSCREEN)
+        zprobe_zoffset = probe.offset.z;
+        rtscheck.RTS_SndData(probe.offset.z * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
+      #endif
     }
     else {
       #if ENABLED(BABYSTEP_HOTEND_Z_OFFSET)
