@@ -1367,11 +1367,15 @@ void RTSSHOW::RTS_HandleData(void)
           // zprobe_zoffset += 0.001;
           rec_zoffset = ((float)recdat.data[0]) / 100;
         }
+
+        bool neg = false;
+
         if (rec_zoffset > last_zoffset) {
           zprobe_zoffset = last_zoffset + .01;
         } else {
           zprobe_zoffset = last_zoffset - .01;
-        }
+          neg = true;
+      }
         if(WITHIN((zprobe_zoffset), Z_PROBE_OFFSET_RANGE_MIN, Z_PROBE_OFFSET_RANGE_MAX)) {
           SERIAL_ECHOPGM("ZoffsetEnterKey offset [");
           SERIAL_ECHO(zprobe_zoffset);
@@ -1385,12 +1389,9 @@ void RTSSHOW::RTS_HandleData(void)
           zprobe_zoffset = last_zoffset;
         }
 
-        probe.offset.z = zprobe_zoffset;
+        // probe.offset.z = zprobe_zoffset;
         RTS_SndData(zprobe_zoffset * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
-
-        SERIAL_ECHOPGM(STR_PROBE_OFFSET);
-        SERIAL_ECHO(" ");
-        SERIAL_ECHOLNPAIR(STR_Z, probe.offset.z);
+        // SERIAL_ECHOLNPGM(STR_PROBE_OFFSET " " STR_Z, probe.offset.z);
       }
       // settings.save();
       break;
