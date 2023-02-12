@@ -664,6 +664,8 @@ extern float z_offset;
 
 extern bool eeprom_save_flag;
 
+extern uint32_t last_start_time;
+
 #define EEPROM_SAVE_LANGUAGE()      {if(eeprom_save_flag) { settings.save(); eeprom_save_flag = false; }}
 
 // extern bool flag_over_shutdown; 

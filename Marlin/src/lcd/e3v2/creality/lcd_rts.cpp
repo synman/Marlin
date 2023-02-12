@@ -201,6 +201,10 @@ enum{
 int temp_preheat_nozzle = 0, temp_preheat_bed = 0;
 uint8_t preheat_flag = PREHEAT_PLA; // 0=PLA， 1=ABS
 
+// M73 helpers
+uint8_t  last_progress_percent = 0;
+uint32_t last_start_time       = 0;
+uint32_t last_remaining_time   = 0;
 
 /*************************************END***************************************/
 
@@ -2961,6 +2965,25 @@ void EachMomentUpdate(void)
               rtscheck.RTS_SndData(_remain_time / 3600, PRINT_REMAIN_TIME_HOUR_VP);
               rtscheck.RTS_SndData((_remain_time % 3600) / 60, PRINT_REMAIN_TIME_MIN_VP);
           }
+        } else if (ui.get_progress_percent() != last_progress_percent || ui.get_remaining_time() != last_remaining_time) {
+          rtscheck.RTS_SndData(ui.get_remaining_time() / 3600, PRINT_REMAIN_TIME_HOUR_VP);
+          rtscheck.RTS_SndData((ui.get_remaining_time() % 3600) / 60, PRINT_REMAIN_TIME_MIN_VP);
+
+          rtscheck.RTS_SndData((unsigned char) ui.get_progress_percent(), PRINT_PROCESS_ICON_VP);
+          rtscheck.RTS_SndData((unsigned char) ui.get_progress_percent(), PRINT_PROCESS_VP);
+
+          if ((ui.get_remaining_time() > 0 && last_start_time == 0) || last_progress_percent > ui.get_progress_percent()) {
+            last_start_time = HAL_GetTick();
+          }
+
+          if (last_start_time > 0 && ui.get_progress_percent() < 100) {
+            uint32_t elapsed_seconds = (HAL_GetTick() - last_start_time) / 1000;
+            rtscheck.RTS_SndData(elapsed_seconds / 3600, PRINT_TIME_HOUR_VP);
+            rtscheck.RTS_SndData((elapsed_seconds % 3600) / 60, PRINT_TIME_MIN_VP);
+          }
+
+          last_progress_percent = ui.get_progress_percent();
+          last_remaining_time = ui.get_remaining_time();
         }
       // }
 

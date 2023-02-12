@@ -33,6 +33,10 @@
   #include "../../lcd/e3v2/proui/dwin.h"
 #endif
 
+#if ENABLED(CREALITY_TOUCHSCREEN)
+  #include "../../lcd/e3v2/creality/lcd_rts.h"
+#endif
+
 /**
  * M73: Set percentage complete (for display on LCD)
  *
@@ -57,6 +61,11 @@ void GcodeSuite::M73() {
 
     #if ENABLED(SET_PROGRESS_PERCENT)
       if (parser.seenval('P'))
+        #if ENABLED(CREALITY_TOUCHSCREEN)
+          if (parser.value_byte() == 0)
+            last_start_time = HAL_GetTick();
+          #endif
+
         ui.set_progress((PROGRESS_SCALE) > 1
           ? parser.value_float() * (PROGRESS_SCALE)
           : parser.value_byte()

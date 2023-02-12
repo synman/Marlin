@@ -71,6 +71,9 @@
   #define USER_STM32F103  1
 #endif
 
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
 #if ENABLED(ENDER_3S1_PRO)
   /**
    * Release version. Leave the Marlin version or apply a custom scheme.
@@ -95,7 +98,7 @@
   #elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
     #define FIRMWARE_VERSION  "2.1.x-PA"
   #else
-      #define FIRMWARE_VERSION  "2.1.x-PU"
+      #define FIRMWARE_VERSION "2.1.x-PU" STR(GRID_MAX_POINTS_X)
   #endif
 
   #define SCREEN_VERSION    "UI20" 
@@ -131,7 +134,7 @@
   #elif ENABLED(AUTO_BED_LEVELING_BILINEAR)
     #define FIRMWARE_VERSION  "2.1.x-+A"
   #else
-      #define FIRMWARE_VERSION  "2.1.x-+U"
+      #define FIRMWARE_VERSION "2.1.x-+U" STR(GRID_MAX_POINTS_X)
   #endif
 
   #define SCREEN_VERSION    "UI20"
@@ -2138,7 +2141,7 @@
    */
   #define ENABLE_LEVELING_FADE_HEIGHT
   #if ENABLED(ENABLE_LEVELING_FADE_HEIGHT)
-    #define DEFAULT_LEVELING_FADE_HEIGHT 10.0 // (mm) Default fade height.
+    #define DEFAULT_LEVELING_FADE_HEIGHT 0.0 // (mm) Default fade height.
   #endif
 
   /**
