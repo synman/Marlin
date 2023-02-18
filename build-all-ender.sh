@@ -7,12 +7,18 @@ origbranch="$(git rev-parse --abbrev-ref HEAD)"
 
 piohome="$curdir/.pio"
 buildhome="$curdir/.pio/build"
+noclean=0
 
 declare -a branches=($origbranch)
 
 if [ "$1" = "--all_branches" ]
 then
     declare -a branches=(bugfix-2.1.x 2.1.2-ender-3-s1 2.0.8-ender-3-s1)
+fi
+
+if [ "$1" = "--no_clean" ]
+then
+    noclean=1
 fi
 
 declare -a f1_build_variants=(STM32F103RE_creality_s1pro_abl STM32F103RE_creality_s1pro_ubl25 STM32F103RE_creality_s1pro_ubl100 STM32F103RE_creality_s1plus_abl STM32F103RE_creality_s1plus_ubl25 STM32F103RE_creality_s1plus_ubl100)
@@ -23,25 +29,34 @@ do
     git checkout $branch
 
     # delete our .pio directory and cleanall
-    rm -rf $piohome
-    pio run -t cleanall
+    if [ "$noclean" = "0" ]
+    then
+        rm -rf $piohome
+        pio run -t cleanall
 
-    #let things settle down
-    sleep 15
+        #let things settle down
+        sleep 15
+    fi
 
     # build our F1 chip variants
     for variant in "${f1_build_variants[@]}"
     do
-        rm -rf $buildhome/$variant
-        pio run -e $variant -t clean
+        if [ "$noclean" = "0" ]
+        then
+            rm -rf $buildhome/$variant
+            pio run -e $variant -t clean
+        fi
         pio run -e $variant
     done
 
     # build our F4 chip variants
     for variant in "${f4_build_variants[@]}"
     do
-        rm -rf $buildhome/$variant
-        pio run -e $variant -t clean
+        if [ "$noclean" = "0" ]
+        then
+            rm -rf $buildhome/$variant
+            pio run -e $variant -t clean
+        fi
         pio run -e $variant
     done
 
@@ -77,9 +92,12 @@ done
 git checkout $origbranch
 
 # delete our .pio directory and cleanall
-rm -rf $piohome
-pio run -t cleanall
+if [ "$noclean" = "0" ]
+then
+    rm -rf $piohome
+    pio run -t cleanall
+fi
 
 echo " "
-echo "Build Completed Successfully\!"
+echo "Build Completed Successfully!"
 echo " "

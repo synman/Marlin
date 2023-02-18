@@ -1360,43 +1360,59 @@ void RTSSHOW::RTS_HandleData(void)
 
     case ZoffsetEnterKey:
       {
-        last_zoffset = zprobe_zoffset;
-        float rec_zoffset = 0;
-        if(recdat.data[0] >= 32768) {
-          // zprobe_zoffset = ((float)recdat.data[0] - 65536) / 100;
-          // zprobe_zoffset -= 0.001;
-          rec_zoffset = ((float)recdat.data[0] - 65536) / 100;
-        } else {
-          // zprobe_zoffset = ((float)recdat.data[0]) / 100;
-          // zprobe_zoffset += 0.001;
-          rec_zoffset = ((float)recdat.data[0]) / 100;
-        }
-
-        bool neg = false;
-
-        if (rec_zoffset > last_zoffset) {
-          zprobe_zoffset = last_zoffset + .01;
-        } else {
-          zprobe_zoffset = last_zoffset - .01;
-          neg = true;
-      }
-        if(WITHIN((zprobe_zoffset), Z_PROBE_OFFSET_RANGE_MIN, Z_PROBE_OFFSET_RANGE_MAX)) {
-          SERIAL_ECHOLNPGM("ZoffsetEnterKey offset [", zprobe_zoffset, "] last [", last_zoffset, "] sent [", (zprobe_zoffset - last_zoffset), "]");
-          // babystep.add_mm(Z_AXIS, zprobe_zoffset - last_zoffset);
-
-          if (neg) {
-            queue.enqueue_now_P(PSTR("M290 Z-0.01"));
+        if (!card.isPrinting) {
+          last_zoffset = zprobe_zoffset;
+          float rec_zoffset = 0;
+          if(recdat.data[0] >= 32768) {
+            // zprobe_zoffset = ((float)recdat.data[0] - 65536) / 100;
+            // zprobe_zoffset -= 0.001;
+            rec_zoffset = ((float)recdat.data[0] - 65536) / 100;
           } else {
-            queue.enqueue_now_P(PSTR("M290 Z+0.01"));
+            // zprobe_zoffset = ((float)recdat.data[0]) / 100;
+            // zprobe_zoffset += 0.001;
+            rec_zoffset = ((float)recdat.data[0]) / 100;
           }
 
-        } else {
-          zprobe_zoffset = last_zoffset;
-        }
+          bool neg = false;
 
-        // probe.offset.z = zprobe_zoffset;
-        RTS_SndData(zprobe_zoffset * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
-        // SERIAL_ECHOLNPGM(STR_PROBE_OFFSET " " STR_Z, probe.offset.z);
+          if (rec_zoffset > last_zoffset) {
+            zprobe_zoffset = last_zoffset + .01;
+          } else {
+            zprobe_zoffset = last_zoffset - .01;
+            neg = true;
+        }
+          if(WITHIN((zprobe_zoffset), Z_PROBE_OFFSET_RANGE_MIN, Z_PROBE_OFFSET_RANGE_MAX)) {
+            SERIAL_ECHOLNPGM("ZoffsetEnterKey offset [", zprobe_zoffset, "] last [", last_zoffset, "] sent [", (zprobe_zoffset - last_zoffset), "]");
+            // babystep.add_mm(Z_AXIS, zprobe_zoffset - last_zoffset);
+
+            if (neg) {
+              queue.enqueue_now_P(PSTR("M290 Z-0.01"));
+            } else {
+              queue.enqueue_now_P(PSTR("M290 Z+0.01"));
+            }
+
+          } else {
+            zprobe_zoffset = last_zoffset;
+          }
+          RTS_SndData(zprobe_zoffset * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
+        } else {
+          last_zoffset = zprobe_zoffset;
+          if(recdat.data[0] >= 32768)
+          {
+            zprobe_zoffset = ((float)recdat.data[0] - 65536) / 100;
+            zprobe_zoffset -= 0.001;
+          }
+          else
+          {
+            zprobe_zoffset = ((float)recdat.data[0]) / 100;
+            zprobe_zoffset += 0.001;
+          }
+          if(WITHIN((zprobe_zoffset), Z_PROBE_OFFSET_RANGE_MIN, Z_PROBE_OFFSET_RANGE_MAX))
+          {
+            babystep.add_mm(Z_AXIS, zprobe_zoffset - last_zoffset);
+          }
+          probe.offset.z = zprobe_zoffset;
+        }
       }
       // settings.save();
       break;
