@@ -2,7 +2,7 @@
 #define LCD_RTS_LASER_H
 
 #include "string.h"
-#include <arduino.h>
+#include <Arduino.h>
 
 #include "../../../inc/MarlinConfig.h"
 
